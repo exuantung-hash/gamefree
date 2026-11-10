@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DEEPWOOD — A Top-Down Adventure</title>
+  <meta name="description" content="DEEPWOOD — game bắn phi tiêu 2D góc nhìn từ trên xuống: săn quái, nhặt ngọc xanh và thức tỉnh kỹ năng." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=2" />
+</head>
+<body>
+  <canvas id="world" aria-hidden="true"></canvas>
+  <canvas id="game-layer" hidden></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <button id="sound-toggle" class="sound-toggle" type="button" aria-label="Tắt âm thanh" aria-pressed="true">
+    <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" />
+      <path d="M16 8.6a5 5 0 0 1 0 6.8" />
+      <path d="M18.8 6a8.5 8.5 0 0 1 0 12" />
+    </svg>
+    <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" />
+      <path d="M16.5 9.5l4.5 5" />
+      <path d="M21 9.5l-4.5 5" />
+    </svg>
+  </button>
+
+  <main class="menu" id="menu">
+    <div class="menu-money" aria-label="Tiền">
+      <span class="menu-money__coin" aria-hidden="true">◆</span>
+      <span class="menu-money__body">
+        <span class="menu-money__label">Tiền</span>
+        <strong id="menu-money-count">0</strong>
+      </span>
+    </div>
+
+    <header class="logo">
+      <p class="logo-eyebrow">A Top-Down Adventure</p>
+      <h1 class="logo-title"><span class="logo-deep">Deep</span><span class="logo-wood">wood</span></h1>
+      <div class="logo-rule" aria-hidden="true">
+        <span></span>
+        <svg viewBox="0 0 10 10"><rect x="2.2" y="2.2" width="5.6" height="5.6" transform="rotate(45 5 5)" /></svg>
+        <span></span>
+      </div>
+      <p class="logo-tagline">Lạc vào rừng sâu. Tìm đường trở về nhà.</p>
+    </header>
+
+    <button class="character-slot" type="button" id="character-slot" data-character="doctor" aria-haspopup="dialog" aria-controls="character-modal">
+      <span class="character-slot__label">Nhân vật</span>
+      <span class="character-slot__portrait" data-portrait="doctor" aria-hidden="true">
+        <svg viewBox="0 0 64 64" fill="none">
+          <circle cx="32" cy="32" r="30" fill="rgba(18, 42, 42, 0.92)" stroke="rgba(126, 220, 210, 0.42)" />
+          <path d="M14 56c2-12 8-18 18-18s16 6 18 18" fill="#eef5f3" />
+          <path d="M24 42c1.6-4.2 4.4-6 8-6s6.4 1.8 8 6l-2 14H26z" fill="#2f7d78" />
+          <path d="M23 56l-1-13 4-1 1 14zM41 56l1-13-4-1-1 14z" fill="#f7fbfa" />
+          <circle cx="32" cy="27" r="9.5" fill="#e0b48a" />
+          <path d="M23 27c0-7 4-12 9-12s9 5 9 12c-2.4-4.2-5.4-6-9-6s-6.6 1.8-9 6z" fill="#5a4533" />
+          <path d="M25 22.5c1.8-4 4.2-6 7-6" stroke="#7c6146" stroke-width="1.6" stroke-linecap="round" />
+          <circle cx="32" cy="18.5" r="4.1" fill="#dff6f3" stroke="#789a9b" stroke-width="1.4" />
+          <path d="M32 16.5v4M30 18.5h4" stroke="#2f7d78" stroke-width="1" />
+          <circle cx="28.4" cy="29" r="1.1" fill="#2a1d10" />
+          <circle cx="35.6" cy="29" r="1.1" fill="#2a1d10" />
+          <path d="M29 34.5c2 1.2 4 1.2 6 0" stroke="#a86a58" stroke-width="1.2" stroke-linecap="round" />
+          <rect x="14" y="44" width="7" height="7" rx="1.2" fill="#f6faf8" stroke="#2f7d78" stroke-width="0.9" />
+          <path d="M17.5 45.3v4.4M15.3 47.5h4.4" stroke="#d9534f" stroke-width="1.5" />
+        </svg>
+      </span>
+      <span class="character-slot__portrait" data-portrait="warrior" aria-hidden="true" hidden>
+        <svg viewBox="0 0 64 64" fill="none">
+          <circle cx="32" cy="32" r="30" fill="rgba(24, 36, 50, 0.92)" stroke="rgba(232, 197, 71, 0.35)" />
+          <path d="M14 56c2-12 8-18 18-18s16 6 18 18" fill="#6d2f2b" />
+          <path d="M18 48c1-8 6-12 14-12s13 4 14 12" fill="#596b7f" />
+          <path d="M22 42l10-4 10 4-2 7H24z" fill="#7f93a8" />
+          <circle cx="32" cy="28" r="10" fill="#d7ad7e" />
+          <path d="M21 28c0-8 4.5-13 11-13s11 5 11 13c-2.8-4.8-6.3-6.8-11-6.8S23.8 23.2 21 28z" fill="#8fa0b2" />
+          <path d="M23 31h18" stroke="#3e4a58" stroke-width="2" />
+          <path d="M32 19v-5" stroke="#c9a23c" stroke-width="2.4" stroke-linecap="round" />
+          <path d="M28 15c1.5-2 6.5-2 8 0" stroke="#b64634" stroke-width="2.6" stroke-linecap="round" />
+          <circle cx="28.4" cy="29" r="1.1" fill="#2a1d10" />
+          <circle cx="35.6" cy="29" r="1.1" fill="#2a1d10" />
+          <circle cx="18" cy="47" r="6" fill="#7f93a8" stroke="#c9a23c" stroke-width="1.2" />
+          <circle cx="18" cy="47" r="2" fill="#c9a23c" />
+          <path d="M47 44l8-14" stroke="#dce6ef" stroke-width="2.6" stroke-linecap="round" />
+          <path d="M43 46l5-2" stroke="#c9a23c" stroke-width="2.2" stroke-linecap="round" />
+        </svg>
+      </span>
+      <span class="character-slot__portrait" data-portrait="thrower" aria-hidden="true" hidden>
+        <svg viewBox="0 0 64 64" fill="none">
+          <circle cx="32" cy="32" r="30" fill="rgba(18, 42, 27, 0.9)" stroke="rgba(232, 197, 71, 0.35)" />
+          <path d="M16 52c1-10 7-15 16-15s15 5 16 15" fill="#3a5b41" />
+          <path d="M22 48c1-7 5-10 10-10s9 3 10 10" fill="#4d7352" />
+          <circle cx="32" cy="27" r="9" fill="#d7ad7e" />
+          <path d="M23 27c0-7 4-12 9-12s9 5 9 12c-2.2-4.4-5.4-6.2-9-6.2s-6.8 1.8-9 6.2z" fill="#66482a" />
+          <path d="M24 24c1.4-4 4.4-6 8-6" stroke="#a57845" stroke-width="2.4" stroke-linecap="round" />
+          <circle cx="28.6" cy="27" r="1.1" fill="#2a1d10" />
+          <circle cx="35.4" cy="27" r="1.1" fill="#2a1d10" />
+          <path d="M45 15l9 9-2.5 2.5-9-9z" fill="#f0d98e" />
+          <path d="M43.6 16.4l4 4" stroke="#b98f24" stroke-width="1.2" />
+        </svg>
+      </span>
+      <span class="character-slot__portrait" data-portrait="rebirth" aria-hidden="true" hidden>
+        <svg viewBox="0 0 64 64" fill="none">
+          <circle cx="32" cy="32" r="30" fill="rgba(38, 30, 12, 0.94)" stroke="rgba(255, 214, 96, 0.55)" />
+          <path d="M14 56c2-12 8-18 18-18s16 6 18 18" fill="#4b3a1d" />
+          <path d="M22 50c1-8 5-12 10-12s9 4 10 12" fill="#7a5c22" />
+          <circle cx="32" cy="28" r="9.5" fill="#e2b98c" />
+          <path d="M22.5 28c0-8 4-13 9.5-13s9.5 5 9.5 13c-2.4-4.8-5.6-6.8-9.5-6.8s-7.1 2-9.5 6.8z" fill="#2f2415" />
+          <path d="M32 12v6M26 15l2.4 4M38 15l-2.4 4" stroke="#ffd35e" stroke-width="2" stroke-linecap="round" />
+          <circle cx="28.6" cy="28.5" r="1.1" fill="#2a1d10" />
+          <circle cx="35.4" cy="28.5" r="1.1" fill="#2a1d10" />
+          <circle cx="32" cy="38" r="1.5" fill="#ffd35e" />
+        </svg>
+      </span>
+      <span class="character-slot__info">
+        <span class="character-slot__name" id="character-slot-name">Bác sĩ</span>
+        <span class="character-slot__sub" id="character-slot-sub">Doctor · Máu 100 · Hồi máu</span>
+      </span>
+      <span class="character-slot__chevron" aria-hidden="true">›</span>
+    </button>
+
+    <nav class="menu-nav" aria-label="Main menu">
+      <button class="menu-btn menu-btn--primary" type="button" data-action="play">
+        <span class="menu-btn__icon" aria-hidden="true">
+          <svg viewBox="0 0 10 12"><path d="M0 0l10 6-10 6z" /></svg>
+        </span>
+        <span class="menu-btn__text">
+          <span class="menu-btn__label">Play</span>
+          <span class="menu-btn__sub">Bắt đầu hành trình</span>
+        </span>
+        <span class="menu-btn__chevron" aria-hidden="true">›</span>
+      </button>
+
+      <button class="menu-btn" type="button" data-action="shop">
+        <span class="menu-btn__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 8h16l-1.4 11.2a2 2 0 0 1-2 1.8H7.4a2 2 0 0 1-2-1.8z" />
+            <path d="M8.5 8V6.4a3.5 3.5 0 0 1 7 0V8" />
+            <path d="M9 13.2h6M12 10.2v6" />
+          </svg>
+        </span>
+        <span class="menu-btn__text">
+          <span class="menu-btn__label">Shop</span>
+          <span class="menu-btn__sub">Cửa hàng</span>
+        </span>
+        <span class="menu-btn__chevron" aria-hidden="true">›</span>
+      </button>
+
+      <button class="menu-btn" type="button" data-action="settings">
+        <span class="menu-btn__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3.2" />
+            <path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7" />
+          </svg>
+        </span>
+        <span class="menu-btn__text">
+          <span class="menu-btn__label">Settings</span>
+          <span class="menu-btn__sub">Cài đặt</span>
+        </span>
+        <span class="menu-btn__chevron" aria-hidden="true">›</span>
+      </button>
+
+      <button class="menu-btn" type="button" data-action="credits">
+        <span class="menu-btn__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3.5l2.4 5 5.5.7-4 3.9 1 5.5-4.9-2.7-4.9 2.7 1-5.5-4-3.9 5.5-.7z" />
+          </svg>
+        </span>
+        <span class="menu-btn__text">
+          <span class="menu-btn__label">Credits</span>
+          <span class="menu-btn__sub">Ghi công</span>
+        </span>
+        <span class="menu-btn__chevron" aria-hidden="true">›</span>
+      </button>
+    </nav>
+
+  </main>
+
+  <!-- ===================== SETTINGS ===================== -->
+  <div class="modal-layer" id="settings-modal" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <header class="modal-head">
+        <h2 id="settings-title">Settings</h2>
+        <button class="icon-btn" type="button" data-close aria-label="Đóng cài đặt">✕</button>
+      </header>
+
+      <div class="modal-body">
+        <label class="field" for="music-volume">
+          <span class="field-head">
+            <span class="field-label">Music</span>
+            <output class="field-value" id="music-value" for="music-volume">35%</output>
+          </span>
+          <input class="range" type="range" id="music-volume" min="0" max="100" step="1" value="35" />
+        </label>
+
+        <label class="field" for="sfx-volume">
+          <span class="field-head">
+            <span class="field-label">Sound effects</span>
+            <output class="field-value" id="sfx-value" for="sfx-volume">70%</output>
+          </span>
+          <input class="range" type="range" id="sfx-volume" min="0" max="100" step="1" value="70" />
+        </label>
+
+        <div class="field field--row">
+          <span class="field-head field-head--row">
+            <span class="field-label">Fullscreen</span>
+            <span class="field-desc">Toàn màn hình</span>
+          </span>
+          <button class="toggle" type="button" id="fullscreen-toggle" role="switch" aria-checked="false" aria-label="Bật chế độ toàn màn hình">
+            <span class="toggle__knob"></span>
+          </button>
+        </div>
+
+        <div class="field field--row">
+          <span class="field-head field-head--row">
+            <span class="field-label">Screen shake</span>
+            <span class="field-desc">Rung màn hình khi va chạm</span>
+          </span>
+          <button class="toggle" type="button" id="shake-toggle" role="switch" aria-checked="true" aria-label="Bật rung màn hình">
+            <span class="toggle__knob"></span>
+          </button>
+        </div>
+
+        <div class="field field--row">
+          <span class="field-head field-head--row">
+            <span class="field-label">Auto attack</span>
+            <span class="field-desc">Tự động tấn công zombie</span>
+          </span>
+          <button class="toggle" type="button" id="auto-attack-toggle" role="switch" aria-checked="true" aria-label="Tắt tự động tấn công">
+            <span class="toggle__knob"></span>
+          </button>
+        </div>
+      </div>
+
+      <footer class="modal-foot">
+        <button class="text-btn" type="button" id="reset-settings">Về mặc định</button>
+        <button class="menu-btn menu-btn--small" type="button" data-close>
+          <span class="menu-btn__text"><span class="menu-btn__label">Back</span></span>
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <!-- ===================== CREDITS ===================== -->
+  <div class="modal-layer" id="credits-modal" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="credits-title">
+      <header class="modal-head">
+        <h2 id="credits-title">Credits</h2>
+        <button class="icon-btn" type="button" data-close aria-label="Đóng ghi công">✕</button>
+      </header>
+
+      <div class="modal-body">
+        <p class="credits-lead">
+          Một prototype nhỏ của <strong>DEEPWOOD</strong> — game phiêu lưu 2D góc nhìn từ trên xuống,
+          chạy hoàn toàn trên trình duyệt.
+        </p>
+
+        <dl class="credits">
+          <div class="credits__row">
+            <dt>Game design &amp; Code</dt>
+            <dd>Xuân Tùng dev</dd>
+          </div>
+          <div class="credits__row">
+            <dt>Art direction</dt>
+            <dd>Procedural canvas — cây, hồ nước và ánh đom đóm được vẽ bằng code</dd>
+          </div>
+          <div class="credits__row">
+            <dt>Music &amp; Sound</dt>
+            <dd>Web Audio API — gió rừng và tiếng chuông tổng hợp thời gian thực</dd>
+          </div>
+          <div class="credits__row">
+            <dt>Typography</dt>
+            <dd>Cinzel &amp; Inter</dd>
+          </div>
+          <div class="credits__row">
+            <dt>Built with</dt>
+            <dd>HTML · CSS · Vanilla JavaScript</dd>
+          </div>
+          <div class="credits__row">
+            <dt>Special thanks</dt>
+            <dd>Bạn, vì đã ghé thăm khu rừng này.</dd>
+          </div>
+        </dl>
+
+        <p class="credits-version">DEEPWOOD · Prototype v0.1</p>
+      </div>
+
+      <footer class="modal-foot">
+        <span></span>
+        <button class="menu-btn menu-btn--small" type="button" data-close>
+          <span class="menu-btn__text"><span class="menu-btn__label">Back</span></span>
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <!-- ===================== SHOP ===================== -->
+  <div class="modal-layer" id="shop-modal" hidden>
+    <section class="modal shop-modal" role="dialog" aria-modal="true" aria-labelledby="shop-title">
+      <header class="modal-head">
+        <h2 id="shop-title">Cửa hàng</h2>
+        <button class="icon-btn" type="button" data-close aria-label="Đóng cửa hàng">✕</button>
+      </header>
+
+      <div class="modal-body">
+        <p class="shop-lead">
+          <span>Permanent upgrades</span>
+          Nâng cấp vĩnh viễn bằng tiền kiếm được trong rừng.
+        </p>
+
+        <div class="shop-wallet">
+          <span class="shop-wallet__coin" aria-hidden="true">◆</span>
+          <span>Ví của bạn</span>
+          <strong id="shop-money">0</strong>
+        </div>
+
+        <div class="shop-grid">
+          <button class="shop-item" type="button" data-upgrade="hp">
+            <span class="shop-item__icon" aria-hidden="true">❤</span>
+            <span class="shop-item__name">Sinh lực</span>
+            <span class="shop-item__desc">+10 máu khởi đầu mỗi cấp.</span>
+            <span class="shop-item__level">Cấp <strong data-level="hp">0</strong>/5</span>
+            <span class="shop-item__price" data-price="hp">80 ◆</span>
+          </button>
+
+          <button class="shop-item" type="button" data-upgrade="speed">
+            <span class="shop-item__icon" aria-hidden="true">➤</span>
+            <span class="shop-item__name">Bước chân</span>
+            <span class="shop-item__desc">+4% tốc chạy mỗi cấp.</span>
+            <span class="shop-item__level">Cấp <strong data-level="speed">0</strong>/3</span>
+            <span class="shop-item__price" data-price="speed">120 ◆</span>
+          </button>
+        </div>
+      </div>
+
+      <footer class="modal-foot">
+        <span class="shop-hint">Tiền được lưu tự động</span>
+        <button class="menu-btn menu-btn--small" type="button" data-close>
+          <span class="menu-btn__text"><span class="menu-btn__label">Back</span></span>
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <!-- ===================== CHARACTERS ===================== -->
+  <div class="modal-layer character-layer" id="character-modal" hidden>
+    <section class="modal character-modal" role="dialog" aria-modal="true" aria-labelledby="character-title">
+      <header class="modal-head">
+        <h2 id="character-title">Nhân vật</h2>
+        <button class="icon-btn" type="button" data-close aria-label="Đóng chọn nhân vật">✕</button>
+      </header>
+
+      <div class="modal-body">
+        <p class="character-lead">Chọn người đồng hành cùng bạn trong rừng sâu.</p>
+
+        <div class="character-grid">
+          <button class="character-option character-option--doctor is-selected" type="button" data-character="doctor" aria-pressed="true">
+            <span class="character-option__portrait" aria-hidden="true">
+              <svg viewBox="0 0 96 96" fill="none">
+                <circle cx="48" cy="48" r="45" fill="rgba(18, 42, 42, 0.92)" stroke="rgba(126, 220, 210, 0.42)" />
+                <path d="M20 82c3-18 13-27 28-27s25 9 28 27" fill="#eef5f3" />
+                <path d="M35 62c2.5-6.5 7-9.5 13-9.5s10.5 3 13 9.5l-3 21H38z" fill="#2f7d78" />
+                <path d="M32 82l-2-20 6-2 2 22zM64 82l2-20-6-2-2 22z" fill="#f7fbfa" />
+                <circle cx="48" cy="41" r="14" fill="#e0b48a" />
+                <path d="M34 41c0-10.5 6-18 14-18s14 7.5 14 18c-3.6-6.3-8.1-9-14-9s-10.4 2.7-14 9z" fill="#5a4533" />
+                <path d="M37 34.5c2.7-6 6.3-9 10.5-9" stroke="#7c6146" stroke-width="2.4" stroke-linecap="round" />
+                <circle cx="48" cy="28.5" r="6" fill="#dff6f3" stroke="#789a9b" stroke-width="2" />
+                <path d="M48 25.5v6M45 28.5h6" stroke="#2f7d78" stroke-width="1.4" />
+                <circle cx="42.5" cy="44" r="1.7" fill="#2a1d10" />
+                <circle cx="53.5" cy="44" r="1.7" fill="#2a1d10" />
+                <path d="M43.5 52c2.8 1.8 6.2 1.8 9 0" stroke="#a86a58" stroke-width="1.8" stroke-linecap="round" />
+                <rect x="21" y="64" width="10" height="10" rx="2" fill="#f6faf8" stroke="#2f7d78" stroke-width="1.4" />
+                <path d="M26 66.5v5M23.5 69h5" stroke="#d9534f" stroke-width="2" />
+              </svg>
+            </span>
+            <span class="character-option__name">Bác sĩ</span>
+            <span class="character-option__tag">Doctor</span>
+            <span class="character-option__desc">Máu 100 · Không giáp · Tốc độ -5%. Hồi 1 máu mỗi 5 giây, kể cả khi đang nhận sát thương.</span>
+            <span class="character-option__state">Đang chọn</span>
+          </button>
+
+          <button class="character-option character-option--warrior" type="button" data-character="warrior" aria-pressed="false">
+            <span class="character-option__portrait" aria-hidden="true">
+              <svg viewBox="0 0 96 96" fill="none">
+                <circle cx="48" cy="48" r="45" fill="rgba(24, 36, 50, 0.92)" stroke="rgba(232, 197, 71, 0.35)" />
+                <path d="M18 82c2-16 12-24 30-24s28 8 30 24" fill="#6d2f2b" />
+                <path d="M26 74c2-12 9-18 22-18s20 6 22 18" fill="#596b7f" />
+                <path d="M32 63l16-6 16 6-3 11H35z" fill="#7f93a8" />
+                <circle cx="48" cy="42" r="15" fill="#d7ad7e" />
+                <path d="M31 42c0-12 7-20 17-20s17 8 17 20c-4.2-7.2-9.7-10.2-17-10.2S35.2 34.8 31 42z" fill="#8fa0b2" />
+                <path d="M34 46h28" stroke="#3e4a58" stroke-width="3" />
+                <path d="M48 27v-8" stroke="#c9a23c" stroke-width="3.4" stroke-linecap="round" />
+                <path d="M42 22c2.5-3 9.5-3 12 0" stroke="#b64634" stroke-width="3.6" stroke-linecap="round" />
+                <circle cx="42.5" cy="43" r="1.7" fill="#2a1d10" />
+                <circle cx="53.5" cy="43" r="1.7" fill="#2a1d10" />
+                <circle cx="27" cy="70" r="9" fill="#7f93a8" stroke="#c9a23c" stroke-width="1.8" />
+                <circle cx="27" cy="70" r="3" fill="#c9a23c" />
+                <path d="M70 66l12-21" stroke="#dce6ef" stroke-width="3.8" stroke-linecap="round" />
+                <path d="M64 69l7-3" stroke="#c9a23c" stroke-width="3.2" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="character-option__name">Chiến binh</span>
+            <span class="character-option__tag">Warrior</span>
+            <span class="character-option__desc">Máu 120 · Giáp 100 · Tốc độ -10%. Khi còn giáp, giảm 70% sát thương và tiêu hao 10 giáp mỗi đòn. Giáp cạn sẽ hồi đầy trong 60 giây. Ở gần zombie, tự vung kiếm gây 9 sát thương.</span>
+            <span class="character-option__state">Chọn</span>
+          </button>
+
+          <button class="character-option" type="button" data-character="thrower" aria-pressed="false">
+            <span class="character-option__portrait" aria-hidden="true">
+              <svg viewBox="0 0 96 96" fill="none">
+                <circle cx="48" cy="48" r="45" fill="rgba(18, 42, 27, 0.9)" stroke="rgba(232, 197, 71, 0.3)" />
+                <path d="M24 78c1.5-15 10.5-22 24-22s22.5 7 24 22" fill="#3a5b41" />
+                <path d="M33 72c1.5-10 7.5-15 15-15s13.5 5 15 15" fill="#4d7352" />
+                <circle cx="48" cy="40" r="13.5" fill="#d7ad7e" />
+                <path d="M34.5 40c0-10.5 6-18 13.5-18s13.5 7.5 13.5 18c-3.3-6.6-8.1-9.3-13.5-9.3S37.8 33.4 34.5 40z" fill="#66482a" />
+                <path d="M36 35.5c2.1-6 6.6-9 12-9" stroke="#a57845" stroke-width="3.6" stroke-linecap="round" />
+                <circle cx="43" cy="40" r="1.7" fill="#2a1d10" />
+                <circle cx="53" cy="40" r="1.7" fill="#2a1d10" />
+                <path d="M67 22l14 14-3.8 3.8-14-14z" fill="#f0d98e" />
+                <path d="M64.8 24.2l6 6" stroke="#b98f24" stroke-width="1.8" />
+              </svg>
+            </span>
+            <span class="character-option__name">Người ném phi tiêu</span>
+            <span class="character-option__tag">Dart Thrower</span>
+            <span class="character-option__desc">Máu 100 · Không giáp · Tốc độ chuẩn. Phi tiêu tự động nhắm vào zombie gần nhất.</span>
+            <span class="character-option__state">Chọn</span>
+          </button>
+
+          <button class="character-option character-option--rebirth" type="button" data-character="rebirth" aria-pressed="false">
+            <span class="character-option__portrait" aria-hidden="true">
+              <svg viewBox="0 0 96 96" fill="none">
+                <circle cx="48" cy="48" r="45" fill="rgba(38, 30, 12, 0.92)" stroke="rgba(255, 214, 96, 0.55)" />
+                <path d="M22 80c2-16 12-25 26-25s24 9 26 25" fill="#4b3a1d" />
+                <path d="M32 74c1.5-11 8-17 16-17s14.5 6 16 17" fill="#7a5c22" />
+                <circle cx="48" cy="38" r="13.5" fill="#e2b98c" />
+                <path d="M34 38c0-11 6-18.5 14-18.5S62 27 62 38c-3.4-6.8-8.2-9.6-14-9.6S37.4 31.2 34 38z" fill="#2f2415" />
+                <path d="M48 16v8M40 20l3 6M56 20l-3 6" stroke="#ffd35e" stroke-width="2.4" stroke-linecap="round" />
+                <circle cx="43" cy="39" r="1.7" fill="#2a1d10" />
+                <circle cx="53" cy="39" r="1.7" fill="#2a1d10" />
+                <path d="M41 20c4.5-6 10.5-6 14 0-2.6 3-5 4.4-7 4.4S43.6 23 41 20z" fill="#ffd35e" opacity="0.85" />
+                <circle cx="48" cy="52" r="2.1" fill="#ffd35e" />
+              </svg>
+            </span>
+            <span class="character-option__name">Tái sinh</span>
+            <span class="character-option__tag">Rebirth</span>
+            <span class="character-option__desc">Máu 90 · Không giáp · Tốc độ +10%. Một lần mỗi trận: hồi sinh tại chỗ với 50% máu và 3 giây bất tử.</span>
+            <span class="character-option__state">Chọn</span>
+          </button>
+        </div>
+
+        <p class="character-note">Mỗi nhân vật có chỉ số riêng. Bạn có thể đổi nhân vật bất cứ lúc nào trước khi vào rừng.</p>
+      </div>
+
+      <footer class="modal-foot">
+        <span></span>
+        <button class="menu-btn menu-btn--small" type="button" data-close>
+          <span class="menu-btn__text"><span class="menu-btn__label">Back</span></span>
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <!-- ===================== MODE SELECT ===================== -->
+  <div class="modal-layer mode-layer" id="mode-modal" hidden>
+    <section class="modal mode-modal" role="dialog" aria-modal="true" aria-labelledby="mode-title">
+      <header class="modal-head">
+        <h2 id="mode-title">Chọn chế độ</h2>
+        <button class="icon-btn" type="button" data-close aria-label="Đóng chọn chế độ">✕</button>
+      </header>
+
+      <div class="modal-body">
+        <p class="mode-lead">
+          <span>Select difficulty</span>
+          Số đợt càng cao, zombie càng đông và càng nguy hiểm.
+        </p>
+
+        <div class="mode-grid">
+          <button class="mode-option mode-option--easy" type="button" data-mode="easy" data-autofocus>
+            <span class="mode-option__leaf" aria-hidden="true">Dễ</span>
+            <span class="mode-option__tag">Easy</span>
+            <span class="mode-option__name">Dễ</span>
+            <strong class="mode-option__waves">30<small>đợt</small></strong>
+            <span class="mode-option__desc">Ít zombie, phù hợp để làm quen với khu rừng.</span>
+          </button>
+
+          <button class="mode-option mode-option--normal" type="button" data-mode="normal">
+            <span class="mode-option__leaf" aria-hidden="true">Thường</span>
+            <span class="mode-option__tag">Normal</span>
+            <span class="mode-option__name">Bình thường</span>
+            <strong class="mode-option__waves">70<small>đợt</small></strong>
+            <span class="mode-option__desc">Cân bằng. Zombie đông dần theo từng đợt.</span>
+          </button>
+
+          <button class="mode-option mode-option--hard" type="button" data-mode="hard">
+            <span class="mode-option__leaf" aria-hidden="true">Khó</span>
+            <span class="mode-option__tag">Hard</span>
+            <span class="mode-option__name">Khó</span>
+            <strong class="mode-option__waves">100<small>đợt</small></strong>
+            <span class="mode-option__desc">Rừng sâu tràn ngập zombie. Chỉ dành cho người gan dạ.</span>
+          </button>
+
+          <button class="mode-option mode-option--infinite" type="button" data-mode="infinite">
+            <span class="mode-option__leaf" aria-hidden="true">∞</span>
+            <span class="mode-option__tag">Infinite</span>
+            <span class="mode-option__name">Vô tận</span>
+            <strong class="mode-option__waves">∞<small>đợt</small></strong>
+            <span class="mode-option__desc">Không có điểm dừng. Sống càng lâu, zombie càng mạnh.</span>
+          </button>
+
+          <button class="mode-option mode-option--custom" type="button" data-mode="custom">
+            <span class="mode-option__leaf" aria-hidden="true">Tùy</span>
+            <span class="mode-option__tag">Custom</span>
+            <span class="mode-option__name">Tùy chỉnh</span>
+            <strong class="mode-option__waves">20+<small>đợt</small></strong>
+            <span class="mode-option__desc">Tự chọn số đợt, tối thiểu 20. Phù hợp cho thử thách riêng.</span>
+          </button>
+        </div>
+
+        <div class="custom-waves" id="custom-waves" hidden>
+          <label class="custom-waves__label" for="custom-wave-input">Số đợt muốn chơi</label>
+          <div class="custom-waves__row">
+            <input class="custom-waves__input" id="custom-wave-input" type="number" min="20" max="500" step="5" value="50" inputmode="numeric" />
+            <button class="menu-btn menu-btn--primary menu-btn--small custom-waves__start" type="button" id="custom-start">
+              <span class="menu-btn__text"><span class="menu-btn__label">Bắt đầu</span></span>
+            </button>
+          </div>
+          <p class="custom-waves__hint">Tối thiểu 20 đợt, tối đa 500 đợt.</p>
+        </div>
+      </div>
+
+      <footer class="modal-foot">
+        <span class="mode-hint">Chọn một chế độ để bắt đầu</span>
+        <button class="menu-btn menu-btn--small" type="button" data-close>
+          <span class="menu-btn__text"><span class="menu-btn__label">Quay lại</span></span>
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <!-- ===================== MAP SELECT ===================== -->
+  <div class="modal-layer map-layer" id="map-modal" hidden>
+    <section class="modal map-modal" role="dialog" aria-modal="true" aria-labelledby="map-title">
+      <header class="modal-head">
+        <h2 id="map-title">Chọn bản đồ</h2>
+        <button class="icon-btn" type="button" data-close aria-label="Đóng chọn bản đồ">✕</button>
+      </header>
+
+      <div class="modal-body">
+        <p class="map-lead">
+          <span>Select map</span>
+          Mỗi bản đồ có ánh sáng và không khí khác nhau.
+        </p>
+
+        <div class="map-grid">
+          <button class="map-option map-option--night is-selected" type="button" data-map="night" data-autofocus>
+            <span class="map-option__preview" aria-hidden="true">
+              <span class="map-preview__icon">🌙</span>
+              <span class="map-preview__label">Rừng tối</span>
+            </span>
+            <span class="map-option__tag">Night</span>
+            <span class="map-option__name">Rừng tối</span>
+            <span class="map-option__desc">Ánh trăng mờ ảo, đom đóm bay, sương mù giăng lối.</span>
+          </button>
+
+          <button class="map-option map-option--day" type="button" data-map="day">
+            <span class="map-option__preview" aria-hidden="true">
+              <span class="map-preview__icon">☀️</span>
+              <span class="map-preview__label">Rừng sáng</span>
+            </span>
+            <span class="map-option__tag">Day</span>
+            <span class="map-option__name">Rừng sáng</span>
+            <span class="map-option__desc">Ánh mặt trời rải rác, không khí trong lành.</span>
+          </button>
+
+          <button class="map-option map-option--moon" type="button" data-map="moon">
+            <span class="map-option__preview" aria-hidden="true">
+              <span class="map-preview__icon">🌕</span>
+              <span class="map-preview__label">Rừng trăng</span>
+            </span>
+            <span class="map-option__tag">Moon</span>
+            <span class="map-option__name">Rừng trăng</span>
+            <span class="map-option__desc">Ánh trăng bạc phủ kín, sương lạnh và bóng tối xanh thẳm.</span>
+          </button>
+        </div>
+      </div>
+
+      <footer class="modal-foot">
+        <button class="menu-btn menu-btn--primary menu-btn--small" type="button" id="map-confirm">
+          <span class="menu-btn__text"><span class="menu-btn__label">Xác nhận</span></span>
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <!-- ===================== HUD ===================== -->
+  <div class="hud" id="hud" hidden>
+    <div class="hud__top">
+      <div class="hud__stats">
+        <div class="hud__stats-row">
+          <span class="hud__stat">
+            <span class="hud__stat-label">Máu</span>
+            <strong><span id="hp-count">100</span><span class="hud__slash">/</span><span id="hp-max">100</span></strong>
+          </span>
+          <span class="hud__divider" aria-hidden="true"></span>
+          <span class="hud__stat">
+            <span class="hud__stat-label">Hạ gục</span>
+            <strong id="kills-count">0</strong>
+          </span>
+          <span class="hud__divider" aria-hidden="true"></span>
+          <span class="hud__stat hud__stat--remaining">
+            <span class="hud__stat-label">Còn lại</span>
+            <strong id="zombies-left">0</strong>
+          </span>
+          <span class="hud__divider" aria-hidden="true"></span>
+          <span class="hud__stat hud__stat--money">
+            <span class="hud__stat-label">Tiền</span>
+            <strong><span class="hud__coin" aria-hidden="true">◆</span><span id="money-count">0</span></strong>
+          </span>
+          <span class="hud__divider" aria-hidden="true"></span>
+          <span class="hud__stat">
+            <span class="hud__stat-label">Đợt</span>
+            <strong><span id="wave-count">1</span><span class="hud__slash">/</span><span id="wave-total">70</span></strong>
+          </span>
+          <span class="hud__divider" aria-hidden="true"></span>
+          <span class="hud__stat">
+            <span class="hud__stat-label">Thời gian</span>
+            <strong id="hud-timer">00:00</strong>
+          </span>
+        </div>
+        <div
+          class="health-track"
+          id="health-track"
+          role="progressbar"
+          aria-label="Máu"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="100"
+        >
+          <span class="health-fill" id="hp-fill"></span>
+        </div>
+        <div class="armor-row">
+          <span class="armor-label">Giáp</span>
+          <div
+            class="armor-track"
+            id="armor-track"
+            role="progressbar"
+            aria-label="Giáp"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
+            <span class="armor-fill" id="armor-fill"></span>
+          </div>
+          <span class="armor-count"><span id="armor-count">0</span>/<span id="armor-max">100</span></span>
+        </div>
+      </div>
+
+      <div class="energy" id="energy">
+        <div class="energy__head">
+          <span class="energy__label" id="energy-label">Năng lượng</span>
+          <span class="energy__count">
+            <span id="energy-count">0</span><span class="energy__slash">/</span><span id="energy-max">8</span>
+          </span>
+        </div>
+        <div
+          class="energy__track"
+          id="energy-track"
+          role="progressbar"
+          aria-label="Năng lượng"
+          aria-valuemin="0"
+          aria-valuemax="8"
+          aria-valuenow="0"
+        ></div>
+      </div>
+
+      <button class="hud__pause" id="pause-btn" type="button" aria-label="Tạm dừng">
+        <svg viewBox="0 0 12 14" aria-hidden="true">
+          <rect x="1" y="1" width="3.4" height="12" rx="1" />
+          <rect x="7.6" y="1" width="3.4" height="12" rx="1" />
+        </svg>
+      </button>
+    </div>
+
+    </div>
+
+  <!-- ===================== SKILL CHOICE ===================== -->
+  <div class="modal-layer skill-layer" id="skill-layer" hidden>
+    <section class="skill-panel" role="dialog" aria-modal="true" aria-labelledby="skill-title">
+      <p class="eyebrow">Năng lượng đầy</p>
+      <h2 id="skill-title">Thức tỉnh kỹ năng</h2>
+      <p class="skill-text">Chọn một trong ba kỹ năng để tiếp tục chuyến đi.</p>
+      <div class="skill-cards" id="skill-cards"></div>
+      <button class="skill-reroll" id="skill-reroll" type="button">
+        <span class="skill-reroll__label">Đổi kỹ năng</span>
+        <span class="skill-reroll__cost"><span aria-hidden="true">◆</span> 10</span>
+      </button>
+      <p class="skill-hint">
+        Nhấn <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> để chọn nhanh
+      </p>
+    </section>
+  </div>
+
+  <div class="skill-toast" id="skill-toast" hidden></div>
+
+  <!-- ===================== PAUSE ===================== -->
+  <div class="modal-layer pause-layer" id="pause-layer" hidden>
+    <section class="modal pause-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <p class="eyebrow">Paused</p>
+      <h2 id="pause-title">Nghỉ chân</h2>
+      <p class="pause-text">Khu rừng vẫn ở đây chờ bạn.</p>
+      <div class="pause-actions">
+        <button class="menu-btn menu-btn--small" type="button" id="resume-btn">
+          <span class="menu-btn__text"><span class="menu-btn__label">Resume</span></span>
+        </button>
+        <button class="menu-btn menu-btn--small" type="button" id="quit-btn">
+          <span class="menu-btn__text"><span class="menu-btn__label">Main menu</span></span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== GAME OVER ===================== -->
+  <div class="modal-layer gameover-layer" id="gameover-layer" hidden>
+    <section class="modal gameover-card" role="dialog" aria-modal="true" aria-labelledby="gameover-title">
+      <p class="eyebrow">Bạn đã gục ngã</p>
+      <h2 id="gameover-title">Rừng sâu nuốt chửng</h2>
+      <p class="gameover-text">Zombie đã hạ gục bạn. Hãy thử lại và sống lâu hơn.</p>
+      <div class="gameover-stats">
+        <div class="gameover-stat">
+          <span>Hạ gục</span>
+          <strong id="gameover-kills">0</strong>
+        </div>
+        <div class="gameover-stat">
+          <span>Thời gian</span>
+          <strong id="gameover-time">00:00</strong>
+        </div>
+        <div class="gameover-stat">
+          <span>Kỹ năng</span>
+          <strong id="gameover-skills">0</strong>
+        </div>
+      </div>
+      <div class="pause-actions">
+        <button class="menu-btn menu-btn--small" type="button" id="gameover-replay">
+          <span class="menu-btn__text"><span class="menu-btn__label">Chơi lại</span></span>
+        </button>
+        <button class="menu-btn menu-btn--small" type="button" id="gameover-menu">
+          <span class="menu-btn__text"><span class="menu-btn__label">Về menu</span></span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== VICTORY ===================== -->
+  <div class="modal-layer victory-layer" id="victory-layer" hidden>
+    <section class="modal victory-card" role="dialog" aria-modal="true" aria-labelledby="victory-title">
+      <p class="eyebrow">Bạn đã sống sót</p>
+      <h2 id="victory-title">Vượt qua rừng sâu</h2>
+      <p class="victory-text">Bạn đã trụ vững qua toàn bộ các đợt zombie. Rừng sâu đã tôn trọng bạn.</p>
+      <div class="gameover-stats">
+        <div class="gameover-stat">
+          <span>Hạ gục</span>
+          <strong id="victory-kills">0</strong>
+        </div>
+        <div class="gameover-stat">
+          <span>Thời gian</span>
+          <strong id="victory-time">00:00</strong>
+        </div>
+        <div class="gameover-stat">
+          <span>Kỹ năng</span>
+          <strong id="victory-skills">0</strong>
+        </div>
+      </div>
+      <div class="pause-actions">
+        <button class="menu-btn menu-btn--small" type="button" id="victory-replay">
+          <span class="menu-btn__text"><span class="menu-btn__label">Chơi lại</span></span>
+        </button>
+        <button class="menu-btn menu-btn--small" type="button" id="victory-menu">
+          <span class="menu-btn__text"><span class="menu-btn__label">Về menu</span></span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <p class="build-tag">Prototype v0.2</p>
+
+  <script src="js/audio.js?v=2"></script>
+  <script src="js/background.js?v=2"></script>
+  <script src="js/game.js?v=2"></script>
+  <script src="js/main.js?v=2"></script>
+</body>
+</html>
