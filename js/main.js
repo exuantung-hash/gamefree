@@ -10,6 +10,7 @@
 
   const STORAGE_KEY = "deepwood.settings.v1";
   const CHARACTER_KEY = "deepwood.character.v2";
+  const CHARACTER_UNLOCKED_KEY = "deepwood.characters.v1";
   const MAP_KEY = "deepwood.map.v1";
   const SHOP_KEY = "deepwood.shop.v1";
   const DEFAULTS = {
@@ -21,8 +22,13 @@
   };
 
   const SHOP_DEFS = {
-    hp: { max: 5, base: 80, step: 40 },
-    speed: { max: 3, base: 120, step: 60 },
+  };
+
+  const CHARACTER_PRICES = {
+    doctor: 5000,
+    warrior: 10000,
+    thrower: 0,
+    rebirth: 5000,
   };
 
   const CHARACTER_META = {
@@ -114,13 +120,48 @@
   function loadCharacter() {
     try {
       const raw = window.localStorage.getItem(CHARACTER_KEY);
-      if (raw === "doctor" || raw === "warrior" || raw === "thrower" || raw === "rebirth") {
+      const unlocked = loadCharacterUnlocked();
+      if (
+        raw &&
+        (raw === "thrower" || unlocked.includes(raw)) &&
+        (raw === "doctor" || raw === "warrior" || raw === "thrower" || raw === "rebirth")
+      ) {
         return raw;
       }
     } catch (error) {
       /* bỏ qua */
     }
-    return "doctor";
+    return "thrower";
+  }
+
+  function loadCharacterUnlocked() {
+    try {
+      const raw = window.localStorage.getItem(CHARACTER_UNLOCKED_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (error) {
+      /* bỏ qua */
+    }
+    // Mặc định đã mở khóa người ném phi tiêu
+    return ["thrower"];
+  }
+
+  function saveCharacterUnlocked(list) {
+    try {
+      window.localStorage.setItem(CHARACTER_UNLOCKED_KEY, JSON.stringify(list));
+    } catch (error) {
+      /* bỏ qua */
+    }
+  }
+
+  function unlockCharacter(id) {
+    const unlocked = loadCharacterUnlocked();
+    if (!unlocked.includes(id)) {
+      unlocked.push(id);
+      saveCharacterUnlocked(unlocked);
+    }
   }
 
   function saveCharacter(id) {
@@ -278,7 +319,7 @@
   }
 
   function applyCharacter(id, persist) {
-    const next = CHARACTER_META[id] ? id : "doctor";
+    const next = CHARACTER_META[id] ? id : "thrower";
     selectedCharacter = next;
 
     const meta = CHARACTER_META[next];
@@ -292,11 +333,27 @@
 
     els.characterOptions.forEach((button) => {
       const active = button.dataset.character === next;
+      const unlocked = loadCharacterUnlocked().includes(button.dataset.character);
       button.classList.toggle("is-selected", active);
+      button.classList.toggle("character-option--locked", !unlocked);
       button.setAttribute("aria-pressed", active ? "true" : "false");
       const stateEl = button.querySelector(".character-option__state");
-      if (stateEl) stateEl.textContent = active ? "Đang chọn" : "Chọn";
+      if (stateEl) stateEl.textContent = active ? "Đang chọn" : unlocked ? "Chọn" : "Khóa";
     });
+
+    // Re-sort character options: owned characters first
+    const charGrid = document.querySelector(".character-grid");
+    if (charGrid) {
+      const owned = [];
+      const locked = [];
+      els.characterOptions.forEach((btn) => {
+        const id = btn.dataset.character;
+        const isUnlocked = loadCharacterUnlocked().includes(id);
+        if (isUnlocked) owned.push(btn);
+        else locked.push(btn);
+      });
+      [...owned, ...locked].forEach((btn) => charGrid.appendChild(btn));
+    }
 
     if (persist) saveCharacter(next);
   }
@@ -632,7 +689,34 @@
       button.addEventListener("pointerenter", playHover);
       button.addEventListener("click", () => {
         DeepwoodAudio.click();
-        applyCharacter(button.dataset.character, true);
+        const id = button.dataset.character;
+        const price = CHARACTER_PRICES[id] || 0;
+        const unlocked = loadCharacterUnlocked();
+        if (unlocked.includes(id)) {
+          applyCharacter(id, true);
+        } else if (price > 0) {
+          const money = loadWallet();
+          if (money >= price) {
+            saveWalletValue(money - price);
+            unlockCharacter(id);
+            applyCharacter(id, true);
+            syncMenuMoney(loadWallet());
+            DeepwoodAudio.pickup();
+          } else {
+            DeepwoodAudio.back();
+                        const hint = document.querySelector(".character-hint");
+            if (hint) {
+              hint.textContent = "Không đủ tiền";
+              hint.style.color = "#ff6b6b";
+              setTimeout(() => {
+                hint.textContent = "Chọn nhân vật để bắt đầu";
+                hint.style.color = "";
+              }, 1500);
+            }
+          }
+        } else {
+          applyCharacter(id, true);
+        }
       });
     });
 
@@ -719,6 +803,38 @@
 
     document.addEventListener("fullscreenchange", syncFullscreen);
 
+    // ---------- Mobile controls ----------
+    const dpadBtns = $(".dpad__btn");
+    const shootBtn = $("#mobile-shoot");
+
+    if (dpadBtns.length) {
+      dpadBtns.forEach((btn) => {
+        const key = btn.dataset.key;
+        const start = () => {
+          if (!key) return;
+          document.dispatchEvent(new KeyboardEvent("keydown", { key, code: key }));
+        };
+        const end = () => {
+          if (!key) return;
+          document.dispatchEvent(new KeyboardEvent("keyup", { key, code: key }));
+        };
+        btn.addEventListener("touchstart", (e) => { e.preventDefault(); start(); }, { passive: false });
+        btn.addEventListener("touchend", (e) => { e.preventDefault(); end(); }, { passive: false });
+        btn.addEventListener("touchcancel", end);
+        btn.addEventListener("pointerdown", (e) => { e.preventDefault(); start(); }, { passive: false });
+        btn.addEventListener("pointerup", end);
+        btn.addEventListener("pointercancel", end);
+      });
+    }
+
+    if (shootBtn && typeof Game.triggerManualShoot === "function") {
+      const shootStart = () => {
+        Game.triggerManualShoot();
+      };
+      shootBtn.addEventListener("touchstart", (e) => { e.preventDefault(); shootStart(); }, { passive: false });
+      shootBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); shootStart(); }, { passive: false });
+    }
+
     document.addEventListener("keydown", (event) => {
       const key = event.key;
 
@@ -793,6 +909,21 @@
     document.addEventListener("deepwood:money", (event) => {
       syncMenuMoney(event.detail);
     });
+
+    // Initial sort: cheapest character first
+    const charGrid = document.querySelector(".character-grid");
+    if (charGrid) {
+      const sorted = [].slice.call(els.characterOptions).sort((a, b) => {
+        const pa = CHARACTER_PRICES[a.dataset.character] || 0;
+        const pb = CHARACTER_PRICES[b.dataset.character] || 0;
+        return pa - pb;
+      });
+      sorted.forEach((btn) => charGrid.appendChild(btn));
+    }
+
+    // Also apply character-hint visibility
+    const hint = document.querySelector(".character-hint");
+    if (hint) hint.textContent = "Chọn nhân vật để bắt đầu";
   }
 
   boot();

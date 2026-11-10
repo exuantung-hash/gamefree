@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=2" />
+  <link rel="stylesheet" href="css/style.css?v=3" />
 </head>
 <body>
   <canvas id="world" aria-hidden="true"></canvas>
@@ -48,9 +48,9 @@
       <p class="logo-tagline">Lạc vào rừng sâu. Tìm đường trở về nhà.</p>
     </header>
 
-    <button class="character-slot" type="button" id="character-slot" data-character="doctor" aria-haspopup="dialog" aria-controls="character-modal">
+    <button class="character-slot" type="button" id="character-slot" data-character="thrower" aria-haspopup="dialog" aria-controls="character-modal">
       <span class="character-slot__label">Nhân vật</span>
-      <span class="character-slot__portrait" data-portrait="doctor" aria-hidden="true">
+      <span class="character-slot__portrait" data-portrait="doctor" aria-hidden="true" hidden>
         <svg viewBox="0 0 64 64" fill="none">
           <circle cx="32" cy="32" r="30" fill="rgba(18, 42, 42, 0.92)" stroke="rgba(126, 220, 210, 0.42)" />
           <path d="M14 56c2-12 8-18 18-18s16 6 18 18" fill="#eef5f3" />
@@ -87,7 +87,7 @@
           <path d="M43 46l5-2" stroke="#c9a23c" stroke-width="2.2" stroke-linecap="round" />
         </svg>
       </span>
-      <span class="character-slot__portrait" data-portrait="thrower" aria-hidden="true" hidden>
+      <span class="character-slot__portrait" data-portrait="thrower" aria-hidden="true">
         <svg viewBox="0 0 64 64" fill="none">
           <circle cx="32" cy="32" r="30" fill="rgba(18, 42, 27, 0.9)" stroke="rgba(232, 197, 71, 0.35)" />
           <path d="M16 52c1-10 7-15 16-15s15 5 16 15" fill="#3a5b41" />
@@ -317,21 +317,9 @@
         </div>
 
         <div class="shop-grid">
-          <button class="shop-item" type="button" data-upgrade="hp">
-            <span class="shop-item__icon" aria-hidden="true">❤</span>
-            <span class="shop-item__name">Sinh lực</span>
-            <span class="shop-item__desc">+10 máu khởi đầu mỗi cấp.</span>
-            <span class="shop-item__level">Cấp <strong data-level="hp">0</strong>/5</span>
-            <span class="shop-item__price" data-price="hp">80 ◆</span>
-          </button>
-
-          <button class="shop-item" type="button" data-upgrade="speed">
-            <span class="shop-item__icon" aria-hidden="true">➤</span>
-            <span class="shop-item__name">Bước chân</span>
-            <span class="shop-item__desc">+4% tốc chạy mỗi cấp.</span>
-            <span class="shop-item__level">Cấp <strong data-level="speed">0</strong>/3</span>
-            <span class="shop-item__price" data-price="speed">120 ◆</span>
-          </button>
+          <div class="shop-empty">
+            <span class="shop-empty__text">Nâng cấp trang bị sẽ được cập nhật sắp tới.</span>
+          </div>
         </div>
       </div>
 
@@ -356,7 +344,7 @@
         <p class="character-lead">Chọn người đồng hành cùng bạn trong rừng sâu.</p>
 
         <div class="character-grid">
-          <button class="character-option character-option--doctor is-selected" type="button" data-character="doctor" aria-pressed="true">
+          <button class="character-option character-option--doctor" type="button" data-character="doctor" aria-pressed="false">
             <span class="character-option__portrait" aria-hidden="true">
               <svg viewBox="0 0 96 96" fill="none">
                 <circle cx="48" cy="48" r="45" fill="rgba(18, 42, 42, 0.92)" stroke="rgba(126, 220, 210, 0.42)" />
@@ -378,7 +366,8 @@
             <span class="character-option__name">Bác sĩ</span>
             <span class="character-option__tag">Doctor</span>
             <span class="character-option__desc">Máu 100 · Không giáp · Tốc độ -5%. Hồi 1 máu mỗi 5 giây, kể cả khi đang nhận sát thương.</span>
-            <span class="character-option__state">Đang chọn</span>
+            <span class="character-option__state">Chọn</span>
+            <span class="character-option__price">5.000 ◆</span>
           </button>
 
           <button class="character-option character-option--warrior" type="button" data-character="warrior" aria-pressed="false">
@@ -405,9 +394,10 @@
             <span class="character-option__tag">Warrior</span>
             <span class="character-option__desc">Máu 120 · Giáp 100 · Tốc độ -10%. Khi còn giáp, giảm 70% sát thương và tiêu hao 10 giáp mỗi đòn. Giáp cạn sẽ hồi đầy trong 60 giây. Ở gần zombie, tự vung kiếm gây 9 sát thương.</span>
             <span class="character-option__state">Chọn</span>
+            <span class="character-option__price">10.000 ◆</span>
           </button>
 
-          <button class="character-option" type="button" data-character="thrower" aria-pressed="false">
+          <button class="character-option is-selected" type="button" data-character="thrower" aria-pressed="true">
             <span class="character-option__portrait" aria-hidden="true">
               <svg viewBox="0 0 96 96" fill="none">
                 <circle cx="48" cy="48" r="45" fill="rgba(18, 42, 27, 0.9)" stroke="rgba(232, 197, 71, 0.3)" />
@@ -425,7 +415,8 @@
             <span class="character-option__name">Người ném phi tiêu</span>
             <span class="character-option__tag">Dart Thrower</span>
             <span class="character-option__desc">Máu 100 · Không giáp · Tốc độ chuẩn. Phi tiêu tự động nhắm vào zombie gần nhất.</span>
-            <span class="character-option__state">Chọn</span>
+            <span class="character-option__state">Đang chọn</span>
+            <span class="character-option__price">Miễn phí</span>
           </button>
 
           <button class="character-option character-option--rebirth" type="button" data-character="rebirth" aria-pressed="false">
@@ -447,6 +438,7 @@
             <span class="character-option__tag">Rebirth</span>
             <span class="character-option__desc">Máu 90 · Không giáp · Tốc độ +10%. Một lần mỗi trận: hồi sinh tại chỗ với 50% máu và 3 giây bất tử.</span>
             <span class="character-option__state">Chọn</span>
+            <span class="character-option__price">5.000 ◆</span>
           </button>
         </div>
 
@@ -454,7 +446,7 @@
       </div>
 
       <footer class="modal-foot">
-        <span></span>
+        <span class="character-hint">Chọn nhân vật để bắt đầu</span>
         <button class="menu-btn menu-btn--small" type="button" data-close>
           <span class="menu-btn__text"><span class="menu-btn__label">Back</span></span>
         </button>
@@ -685,6 +677,20 @@
 
     </div>
 
+    <!-- Mobile controls (hiện trên thiết bị cảm ứng) -->
+    <div class="mobile-controls" id="mobile-controls" aria-hidden="true">
+      <div class="dpad">
+        <button class="dpad__btn dpad__up" type="button" data-key="ArrowUp">▲</button>
+        <div class="dpad__row">
+          <button class="dpad__btn dpad__left" type="button" data-key="ArrowLeft">◀</button>
+          <button class="dpad__btn dpad__down" type="button" data-key="ArrowDown">▼</button>
+          <button class="dpad__btn dpad__right" type="button" data-key="ArrowRight">▶</button>
+        </div>
+      </div>
+      <button class="shoot-btn" type="button" id="mobile-shoot">Bắn</button>
+    </div>
+  
+
   <!-- ===================== SKILL CHOICE ===================== -->
   <div class="modal-layer skill-layer" id="skill-layer" hidden>
     <section class="skill-panel" role="dialog" aria-modal="true" aria-labelledby="skill-title">
@@ -785,9 +791,9 @@
 
   <p class="build-tag">Prototype v0.2</p>
 
-  <script src="js/audio.js?v=2"></script>
-  <script src="js/background.js?v=2"></script>
-  <script src="js/game.js?v=2"></script>
-  <script src="js/main.js?v=2"></script>
+  <script src="js/audio.js?v=3"></script>
+  <script src="js/background.js?v=3"></script>
+  <script src="js/game.js?v=3"></script>
+  <script src="js/main.js?v=3"></script>
 </body>
 </html>

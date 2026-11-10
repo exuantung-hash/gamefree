@@ -26,7 +26,7 @@ const Game = (() => {
   const HIT_INVULN = 0.55;
   const GEM_PICKUP = 30;
   const MAGNET_BASE = 64;
-  const MAX_ZOMBIES = 96;
+  const MAX_ZOMBIES = 64;
   const CELL = 260;
   const POISON_WAVE_START = 5;
   const POISON_WAVE_END = 100;
@@ -82,6 +82,22 @@ const Game = (() => {
   const BOSS_HP_PER_WAVE = 55;
   const BOSS_DAMAGE = 26;
   const BOSS_MONEY = 120;
+  const TORNADO_INTERVAL = 5;
+  const ENHANCED_SHIELD_DAMAGE_REDUCE = 0.3;
+  const TORNADO_DAMAGE = 10;
+  const TORNADO_RADIUS = 200;
+  const MINE_INTERVAL = 10;
+  const MINE_DAMAGE = 50;
+  const MINE_RADIUS = 100;
+  const MINE_GRACE_TIME = 1.5;
+  const MINE_MAX_LEVELS = [10, 8.5, 7, 6, 5];
+  const MINE_DAMAGE_LEVELS = [50, 65, 80, 95, 110];
+  const PARALLEL_UNIVERSE_COOLDOWN = 180;
+  const PARALLEL_UNIVERSE_DURATION = 10;
+  const PARALLEL_UNIVERSE_DAMAGE_MULT = 5;
+  const XRAY_DAMAGE_MULT = 3;
+  const SHIELD_HP_THRESHOLD = 0.3;
+  const FIRE_RATE_LEVELS = [1.5, 1.8, 2.1, 2.5, 3.0, 3.5, 4.0, 4.5, 4.8, 5.0];
   const DOCTOR_REGEN_INTERVAL = 5;
   const DOCTOR_REGEN_SAFE = 1;
   const DOCTOR_REGEN_HURT = 1;
@@ -127,7 +143,7 @@ const Game = (() => {
   const FREEZE_LEVELS = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3];
   const FREEZE_DURATIONS = [2, 2.5, 3, 4, 5];
   const BOSS_HUNTER_LEVELS = [0.05, 0.1, 0.15, 0.18, 0.2];
-  const PIERCE_LEVELS = [2, 3, 5, 7, 10];
+  const PIERCE_LEVELS = [999];
   const LIGHTNING_LEVELS = [
     { interval: 10, count: 1, damage: 20, radius: 78, burnDps: 2, burnTime: 5 },
     { interval: 9, count: 1, damage: 22, radius: 82, burnDps: 3, burnTime: 5 },
@@ -267,10 +283,10 @@ const Game = (() => {
       id: "pierce",
       name: "Xuyên thấu",
       tag: "Pierce",
-      max: 5,
+      max: 1,
       rarity: "legendary",
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',
-      desc: (level) => "Phi tiêu xuyên qua " + PIERCE_LEVELS[Math.min(level, PIERCE_LEVELS.length) - 1] + " zombie thay vì biến mất khi trúng.",
+      desc: () => "Phi tiêu xuyên qua mọi zombie không giới hạn.",
     },
     {
       id: "lightning",
@@ -303,6 +319,89 @@ const Game = (() => {
       desc: (level) => {
         const cfg = METEOR_LEVELS[Math.min(level, METEOR_LEVELS.length) - 1];
         return `Mỗi ${cfg.cooldown}s gọi ${cfg.count} thiên thạch rơi vào zombie, gây ${cfg.damage} sát thương diện rộng và cháy ${cfg.burnDps}/giây trong ${cfg.burnTime}s.`;
+      },
+    },
+    {
+      id: "enhancedShield",
+      name: "Khiên tăng cường",
+      tag: "Enhanced Shield",
+      max: 1,
+      rarity: "legendary",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/><path d="M8 8l4 4 8-8"/></svg>',
+      desc: function() { return "Khi dưới 50% máu, tạo khiên giảm 30% tất cả các loại sát thương."; },
+    },
+    {
+      id: "energyShield",
+      name: "Lá chắn năng lượng",
+      tag: "Energy Shield",
+      max: 1,
+      rarity: "legendary",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>',
+      desc: () => "Khi dưới 50% máu, tạo khiên giảm 20% sát thương nhận được.",
+    },
+    {
+      id: "chainLightning",
+      name: "Điện lan truyền",
+      tag: "Chain Lightning",
+      max: 1,
+      rarity: "legendary",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 7 10-14"/><path d="M5 12l7 7M19 12l-7 7"/></svg>',
+      desc: () => "15% cơ hội mỗi đòn phóng điện sang 3 zombie gần nhất.",
+    },
+    {
+      id: "mine",
+      name: "Đặt mìn",
+      tag: "Mine",
+      max: 5,
+      rarity: "legendary",
+      evolve: {
+        name: "Mìn siêu cấp",
+        desc: "Đặt mìn mỗi 5s, gây 30 sát thương.",
+      },
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4v4M12 16v4M4 12h4M16 12h4"/><path d="M9 9l3 3M15 15l-3-3"/></svg>',
+      desc: function(level) {
+        const interval = MINE_MAX_LEVELS[Math.min(level, MINE_MAX_LEVELS.length) - 1];
+        const dmg = MINE_DAMAGE_LEVELS[Math.min(level, MINE_DAMAGE_LEVELS.length) - 1];
+        return "Mỗi " + interval + "s đặt 1 quả mìn dưới chân, gây " + dmg + " sát thương diện rộng khi zombie chạm.";
+      },
+    },
+    {
+      id: "tornado",
+      name: "Lốc xoáy",
+      tag: "Tornado",
+      max: 1,
+      rarity: "legendary",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M12 22l-4-4M12 22l4-4"/></svg>',
+      desc: () => "Mỗi 5 giây tạo lốc xoáy đẩy lùi zombie xung quanh và gây 10 sát thương.",
+    },
+    {
+      id: "parallelUniverse",
+      name: "Vũ trụ song song",
+      tag: "Parallel Universe",
+      max: 1,
+      rarity: "legendary",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><path d="M5 5l14 14M19 5l-14 14"/></svg>',
+      desc: () => "Khi dưới 30% máu, tạo Vũ trụ song song (màu tím): gây thêm x5 sát thương, hồi đầy máu ngay lập tức, kéo dài 10 giây. Hồi chiêu 3 phút.",
+    },
+    {
+      id: "xRay",
+      name: "X-quang",
+      tag: "X-Ray",
+      max: 5,
+      rarity: "rare",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l4 16M2 12h16M8 8l8 8M16 8l-8 8"/></svg>',
+      desc: (level) => "Tia laser xuyên qua mọi zombie, gây x3 sát thương zombie chiến binh.",
+    },
+    {
+      id: "fireRate",
+      name: "Tốc độ phóng",
+      tag: "Fire Rate",
+      max: 10,
+      rarity: "rare",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/><path d="M8 8l4 4 8-8"/></svg>',
+      desc: (level) => {
+        const mult = FIRE_RATE_LEVELS[Math.min(level, FIRE_RATE_LEVELS.length) - 1];
+        return "Tăng tốc độ phóng phi tiêu x" + mult + ".";
       },
     },
   ];
@@ -351,7 +450,7 @@ const Game = (() => {
     victoryMenu: document.getElementById("victory-menu"),
   };
 
-  const DEFAULT_CHARACTER = "doctor";
+  const DEFAULT_CHARACTER = "thrower";
 
   const MODES = {
     easy: { id: "easy", name: "Dễ", tag: "Easy", waves: 30, density: 0.82, special: 0.7 },
@@ -370,7 +469,8 @@ const Game = (() => {
       armor: 0,
       speed: 0.95,
       skin: "doctor",
-      desc: "Máu 100 · Không giáp · Tốc độ -5%. Hồi 2 máu mỗi 5 giây khi không nhận sát thương; hồi 1 máu mỗi 5 giây khi đang nhận sát thương.",
+      price: 5000,
+      desc: "Máu 100 · Không giáp · Tốc độ -5%. Hồi 1 máu mỗi 5 giây, kể cả khi đang nhận sát thương.",
     },
     warrior: {
       id: "warrior",
@@ -380,6 +480,7 @@ const Game = (() => {
       armor: 100,
       speed: 0.9,
       skin: "warrior",
+      price: 10000,
       desc: "Máu 120 · Giáp 100 · Tốc độ -10%. Khi còn giáp, giảm 70% sát thương và tiêu hao 10 giáp mỗi đòn. Giáp cạn sẽ hồi đầy trong 60 giây. Ở gần zombie, tự vung kiếm gây 9 sát thương.",
     },
     thrower: {
@@ -390,6 +491,7 @@ const Game = (() => {
       armor: 0,
       speed: 1,
       skin: "thrower",
+      price: 0,
       desc: "Máu 100 · Không giáp · Tốc độ chuẩn. Phi tiêu tự động nhắm vào zombie gần nhất.",
     },
     rebirth: {
@@ -401,6 +503,7 @@ const Game = (() => {
       speed: 1.1,
       skin: "rebirth",
       revives: 1,
+      price: 5000,
       desc: "Máu 90 · Không giáp · Tốc độ +10%. Một lần mỗi trận: hồi sinh tại chỗ với 50% máu và 3 giây bất tử.",
     },
   };
@@ -467,6 +570,7 @@ const Game = (() => {
     spawnTimer: 0,
     shootCooldown: 0,
     autoAttack: true,
+    pointerShoot: false,
     revives: 0,
     upgrades: { hp: 0, speed: 0 },
     speedMult: 1,
@@ -475,9 +579,16 @@ const Game = (() => {
     damageTimer: 999,
     firebombTimer: 0,
     meteorTimer: 0,
+    mineTimer: 0,
+    parallelUniverseTimer: 0,
+    parallelUniverseActive: false,
+    xRayLaserTimer: 0,
+    fireRateTimer: 0,
+    evolved: {},
+    tornadoTimer: 0,
     meteors: [],
+    mines: [],
     sawAngle: 0,
-    remainingDisplay: -1,
     playerSlowTimer: 0,
     playerSlowMult: 1,
     lightningTimer: 0,
@@ -1472,8 +1583,6 @@ const Game = (() => {
       hits += 1;
     }
 
-    if (hits === 0) return false;
-
     state.shootCooldown = BASE_COOLDOWN;
     state.slashes.push({
       x: p.x,
@@ -1499,12 +1608,32 @@ const Game = (() => {
     return shoot();
   }
 
-  function shoot() {
-    const target = nearestZombie(DART_RANGE);
-    if (!target) return false;
+  function triggerManualShoot() {
+    if (state.autoAttack) return;
+    if (state.shootCooldown <= 0) {
+      // Shoot toward mouse pointer position
+      const p = state.player;
+      if (state.pointer.active) {
+        const worldX = state.camera.x + state.pointer.x;
+        const worldY = state.camera.y + state.pointer.y;
+        const angle = Math.atan2(worldY - p.y, worldX - p.x);
+        shoot(angle);
+      } else {
+        tryAttack();
+      }
+    }
+  }
 
+  function shoot(targetAngle) {
     const p = state.player;
-    const baseAngle = Math.atan2(target.y - p.y, target.x - p.x);
+    let baseAngle;
+    if (targetAngle != null) {
+      baseAngle = targetAngle;
+    } else {
+      const target = nearestZombie(DART_RANGE);
+      if (!target) return false;
+      baseAngle = Math.atan2(target.y - p.y, target.x - p.x);
+    }
     const angles = state.skills.triple > 0
       ? [baseAngle - 0.26, baseAngle, baseAngle + 0.26]
       : [baseAngle];
@@ -1527,10 +1656,90 @@ const Game = (() => {
       });
     }
 
-    state.shootCooldown = BASE_COOLDOWN;
+    const fireRateMult = state.skills.fireRate > 0
+      ? FIRE_RATE_LEVELS[Math.min(state.skills.fireRate, FIRE_RATE_LEVELS.length) - 1]
+      : 1;
+    state.shootCooldown = BASE_COOLDOWN / fireRateMult;
     DeepwoodAudio.shoot();
     burst(p.x + Math.cos(baseAngle) * 26, p.y + Math.sin(baseAngle) * 26, 3, "246, 222, 150", 8, 38);
     return true;
+  }
+
+  function updateXRay(dt) {
+    try {
+      if (!state.skills || state.skills.xRay <= 0) return;
+      if (!state.player) return;
+
+      state.xRayLaserTimer = Math.max(0, state.xRayLaserTimer - dt);
+      if (state.xRayLaserTimer > 0) return;
+
+      // X-ray fires every 1.5 seconds
+      state.xRayLaserTimer = 1.5;
+
+      const p = state.player;
+      if (!p || typeof p.x !== 'number' || typeof p.y !== 'number') return;
+
+      const target = nearestZombie(500);
+      if (!target || typeof target.x !== 'number' || typeof target.y !== 'number') return;
+
+      const dx = target.x - p.x;
+      const dy = target.y - p.y;
+      const angle = Math.atan2(dy, dx);
+      if (!isFinite(angle)) return;
+
+      const range = 500;
+      const endX = p.x + Math.cos(angle) * range;
+      const endY = p.y + Math.sin(angle) * range;
+
+      const lineLen = Math.hypot(endY - p.y, endX - p.x);
+      if (!isFinite(lineLen) || lineLen <= 0) return;
+
+      // Laser beam visual - short lived blast
+      state.blasts.push({
+        x: p.x,
+        y: p.y,
+        life: 0,
+        ttl: 0.2,
+        radius: 6,
+        tone: "180, 100, 255",
+      });
+
+      // Fire laser in a line - damage all zombies in path
+      for (let i = 0; i < state.zombies.length; i++) {
+        const zombie = state.zombies[i];
+        if (!zombie || zombie.dead) continue;
+        if (typeof zombie.x !== 'number' || typeof zombie.y !== 'number') continue;
+
+        // Check if zombie is close to the laser line
+        const distToLine = Math.abs(
+          (endY - p.y) * zombie.x -
+          (endX - p.x) * zombie.y +
+          endX * p.y -
+          endY * p.x
+        ) / lineLen;
+
+        if (!isFinite(distToLine)) continue;
+
+        if (distToLine <= (zombie.radius || 10) + 8) {
+          let dmg = Math.max(1, BASE_DAMAGE + (state.skills.heavy || 0) * 2);
+          // X3 damage to warrior zombies
+          if (zombie.type === "warrior") {
+            dmg *= XRAY_DAMAGE_MULT;
+          }
+          damageZombie(zombie, Math.floor(dmg), {
+            quiet: true,
+            tone: "180, 100, 255",
+            count: 4,
+            speed: 60,
+          });
+        }
+      }
+
+      try { DeepwoodAudio.shoot(); } catch (e) { /* audio error, ignore */ }
+    } catch (e) {
+      // Prevent X-ray from freezing the game
+      console.error("X-ray error:", e.message);
+    }
   }
 
   function spawnPoisonZone(x, y) {
@@ -1543,7 +1752,7 @@ const Game = (() => {
       tick: 0.18,
       phase: rand(0, TAU),
     });
-    if (state.poisonZones.length > 18) state.poisonZones.shift();
+    if (state.poisonZones.length > 10) state.poisonZones.shift();
   }
 
   function spawnFireZone(x, y, dps, radius) {
@@ -1557,7 +1766,7 @@ const Game = (() => {
       tick: rand(0, FIREBOMB_TICK),
       phase: rand(0, TAU),
     });
-    if (state.fireZones.length > 16) state.fireZones.shift();
+    if (state.fireZones.length > 10) state.fireZones.shift();
     burst(x, y, 12, "255, 158, 62", 30, 150);
     DeepwoodAudio.fireBurst();
   }
@@ -1731,12 +1940,12 @@ const Game = (() => {
       value: Math.max(1, Math.round(Number(options.value) || 1)),
       kind: options.kind === "red" ? "red" : "green",
     });
-    if (state.gems.length > 160) state.gems.shift();
+    if (state.gems.length > 80) state.gems.shift();
   }
 
   function collectGem(gem) {
     const base = Math.max(1, Math.round(Number(gem.value) || 1));
-    const gain = base * (state.skills.wealth > 0 ? 5 : 1);
+    const gain = base * (state.skills.wealth > 0 ? 3 : 1);
     const before = state.energy;
     state.energy = Math.min(state.energyMax, state.energy + gain);
     const actual = state.energy - before;
@@ -1772,6 +1981,34 @@ const Game = (() => {
     let hpLoss = base;
     let armorLoss = 0;
 
+    // Lá chắn năng lượng: giảm 20% sát thương khi dưới 30% máu
+    if (state.skills.energyShield > 0 && state.hp < state.maxHp * SHIELD_HP_THRESHOLD) {
+      hpLoss = Math.max(1, Math.ceil(base * 0.8));
+    }
+
+    // Khiên tăng cường: giảm 30% tất cả sát thương khi dưới 30% máu
+    if (state.skills.enhancedShield > 0 && state.hp < state.maxHp * SHIELD_HP_THRESHOLD) {
+      hpLoss = Math.max(1, Math.ceil(hpLoss * (1 - ENHANCED_SHIELD_DAMAGE_REDUCE)));
+    }
+
+    // Vũ trụ song song: khi dưới 30% máu, kích hoạt tự động (có hồi chiêu 3 phút)
+    if (
+      state.skills.parallelUniverse > 0 &&
+      !state.parallelUniverseActive &&
+      state.parallelUniverseTimer <= 0 &&
+      state.hp - hpLoss <= state.maxHp * 0.3
+    ) {
+      const healAmount = state.maxHp - state.hp + hpLoss;
+      state.parallelUniverseActive = true;
+      state.parallelUniverseTimer = PARALLEL_UNIVERSE_DURATION;
+      state.hp = state.maxHp; // Hồi đầy máu ngay lập tức
+      updateHealthHud();
+      floatText(state.player.x, state.player.y - 40, "VŨ TRỰ SONG SONG!", "180, 100, 255");
+      showToast("Vũ trụ song song kích hoạt! +" + Math.round(healAmount) + " máu, x5 sát thương trong 10 giây");
+      DeepwoodAudio.win();
+      state.shake = Math.max(state.shake, 0.6);
+    }
+
     if (
       options.shieldZombie &&
       options.shieldZombie.type === "shield" &&
@@ -1802,8 +2039,8 @@ const Game = (() => {
       if (state.armor <= 0) {
         floatText(state.player.x, state.player.y - 34, "Giáp cạn", "255, 118, 104");
       }
-    } else if (!options.ignoreArmor && state.maxArmor > 0 && state.armor <= 0) {
-      // Hết giáp: nhận full damage, không giảm 70%
+    } else {
+      // Không có giáp hoặc hết giáp: nhận full damage, không trừ giáp
       hpLoss = base;
     }
 
@@ -1942,7 +2179,7 @@ const Game = (() => {
       dy /= length;
     }
 
-    const speed = BASE_SPEED * state.character.speed * state.speedMult * (1 + state.skills.agility * 0.05) * state.playerSlowMult;
+    const speed = BASE_SPEED * 0.85 * state.character.speed * state.speedMult * (1 + state.skills.agility * 0.05) * state.playerSlowMult;
     const smooth = 1 - Math.exp(-13 * dt);
     p.vx += (dx * speed - p.vx) * smooth;
     p.vy += (dy * speed - p.vy) * smooth;
@@ -2006,8 +2243,11 @@ const Game = (() => {
 
       let sepX = 0;
       let sepY = 0;
+      let sepChecked = 0;
       for (const other of state.zombies) {
+        if (sepChecked >= 20) break;
         if (other === zombie || other.dead) continue;
+        sepChecked += 1;
         const ox = zombie.x - other.x;
         const oy = zombie.y - other.y;
         const od = Math.hypot(ox, oy);
@@ -2258,16 +2498,16 @@ const Game = (() => {
 
     const cfg = SAW_LEVELS[Math.min(level, SAW_LEVELS.length) - 1];
     const p = state.player;
-    state.sawAngle = (state.sawAngle + cfg.speed * dt) % TAU;
+    state.sawAngle = (state.sawAngle + cfg.speed * sawSpeedMult * dt) % TAU;
 
     for (let i = 0; i < cfg.count; i += 1) {
       const angle = state.sawAngle + (i / cfg.count) * TAU;
-      const sx = p.x + Math.cos(angle) * cfg.radius;
-      const sy = p.y + Math.sin(angle) * cfg.radius;
+      const sx = p.x + Math.cos(angle) * cfg.radius * sawSizeMult;
+      const sy = p.y + Math.sin(angle) * cfg.radius * sawSizeMult;
 
       for (const zombie of state.zombies) {
         if (zombie.dead || zombie.sawCooldown > 0) continue;
-        if (dist(sx, sy, zombie.x, zombie.y) > cfg.size + zombie.radius + 5) continue;
+        if (dist(sx, sy, zombie.x, zombie.y) > cfg.size * sawSizeMult + zombie.radius + 5) continue;
 
         damageZombie(zombie, SAW_DAMAGE, { quiet: true });
         zombie.sawCooldown = 0.42;
@@ -2429,6 +2669,96 @@ const Game = (() => {
     }
   }
 
+  function updateTornado(dt) {
+    if (state.skills.tornado <= 0) return;
+    state.tornadoTimer = Math.max(0, state.tornadoTimer - dt);
+    if (state.tornadoTimer > 0) return;
+    state.tornadoTimer = TORNADO_INTERVAL;
+
+    const p = state.player;
+    let hitAny = false;
+    for (const zombie of state.zombies) {
+      if (zombie.dead) continue;
+      if (dist(p.x, p.y, zombie.x, zombie.y) > TORNADO_RADIUS + zombie.radius) continue;
+      damageZombie(zombie, TORNADO_DAMAGE, { quiet: true, tone: "200, 220, 255", count: 4, speed: 60 });
+      const dx = zombie.x - p.x;
+      const dy = zombie.y - p.y;
+      const d = Math.hypot(dx, dy) || 1;
+      zombie.x += (dx / d) * 60;
+      zombie.y += (dy / d) * 60;
+      hitAny = true;
+    }
+    if (hitAny && state.particles.length < 520) {
+      burst(p.x, p.y, 14, "200, 220, 255", 30, 140);
+      DeepwoodAudio.sawHit();
+    }
+  }
+
+
+  function updateMines(dt) {
+    if (state.skills.mine <= 0) return;
+    state.mineTimer = Math.max(0, state.mineTimer - dt);
+    if (state.mineTimer > 0) return;
+
+    const level = Math.min(state.skills.mine, MINE_MAX_LEVELS.length);
+    const interval = MINE_MAX_LEVELS[level - 1];
+    const damage = MINE_DAMAGE_LEVELS[level - 1];
+    state.mineTimer = interval;
+
+    const p = state.player;
+    state.mines.push({
+      x: p.x,
+      y: p.y,
+      life: 0,
+      ttl: 999,
+      damage,
+      radius: MINE_RADIUS,
+      armed: false,
+      armTime: 1,
+    });
+    DeepwoodAudio.pickup();
+
+    if (state.mines.length > 40) state.mines.shift();
+  }
+
+  function updateMineCollisions(dt) {
+    for (let i = state.mines.length - 1; i >= 0; i -= 1) {
+      const mine = state.mines[i];
+      mine.life += dt;
+      if (!mine.armed) {
+        mine.armTime = Math.max(0, mine.armTime - dt);
+        if (mine.armTime <= 0) mine.armed = true;
+      }
+
+      for (const zombie of state.zombies) {
+        if (zombie.dead) continue;
+        if (!mine.armed) continue;
+        if (dist(zombie.x, zombie.y, mine.x, mine.y) <= mine.radius + zombie.radius) {
+          damageZombie(zombie, mine.damage, {
+            quiet: true,
+            tone: "255, 146, 70",
+            count: 6,
+            speed: 70,
+          });
+          state.blasts.push({
+            x: mine.x,
+            y: mine.y,
+            life: 0,
+            ttl: 0.5,
+            radius: mine.radius,
+            tone: "255, 146, 70",
+          });
+          burst(mine.x, mine.y, 30, "255, 146, 70", 40, 250);
+          burst(mine.x, mine.y, 14, "255, 232, 160", 20, 130);
+          state.shake = Math.max(state.shake, 0.4);
+          DeepwoodAudio.fireBurst();
+          state.mines.splice(i, 1);
+          break;
+        }
+      }
+    }
+  }
+
   function updateDarts(dt) {
     for (let i = state.darts.length - 1; i >= 0; i -= 1) {
       const dart = state.darts[i];
@@ -2467,6 +2797,17 @@ const Game = (() => {
           hitDamage *= 1 + bonus;
         }
 
+        // Nửa hỏa (thiêu đốt / bom xăng / thiên thạch) gây x2 sát thương zombie chiến binh
+        const fireActive = state.skills.burn > 0 || state.skills.firebomb > 0 || state.skills.meteor > 0;
+        if (fireActive && zombie.type === "warrior") {
+          hitDamage *= 2;
+        }
+
+        // Vũ trụ song song: gây x5 sát thương tất cả các loại zombie
+        if (state.parallelUniverseActive && state.skills.parallelUniverse > 0) {
+          hitDamage *= PARALLEL_UNIVERSE_DAMAGE_MULT;
+        }
+
         damageZombie(zombie, hitDamage, {
           tone: critical ? "255, 232, 130" : "190, 245, 200",
           count: critical ? 9 : 5,
@@ -2484,6 +2825,18 @@ const Game = (() => {
             const duration = FREEZE_DURATIONS[Math.min(freezeLevel, FREEZE_DURATIONS.length) - 1];
             zombie.freezeTimer = Math.max(zombie.freezeTimer || 0, duration);
             burst(zombie.x, zombie.y, 6, "170, 226, 255", 14, 60);
+          }
+        }
+
+        // Điện lan truyền: 15% cơ hội chập chập điện sang 3 zombie gần nhất
+        if (state.skills.chainLightning > 0 && !zombie.dead && Math.random() < 0.15) {
+          const others = state.zombies
+            .filter((z) => !z.dead && z.id !== zombie.id)
+            .sort((a, b) => dist(a.x, a.y, zombie.x, zombie.y) - dist(b.x, b.y, zombie.x, zombie.y))
+            .slice(0, 3);
+          for (const target of others) {
+            damageZombie(target, hitDamage * 0.7, { quiet: true, tone: "160, 220, 255", count: 5, speed: 70 });
+            burst(target.x, target.y, 5, "160, 220, 255", 12, 50);
           }
         }
 
@@ -2638,7 +2991,7 @@ const Game = (() => {
     if (state.waveSpawned >= state.waveQuota && state.zombies.length === 0) {
       state.waveState = "clear";
       state.waveTimer = 1.8;
-      addMoney(Math.floor(30 + state.wave * 1.4 + Math.random() * 20));
+      addMoney(Math.floor(500 + Math.random() * 501));
       showToast(`Đợt ${state.wave} hoàn thành`);
       DeepwoodAudio.pickup();
     }
@@ -2796,6 +3149,7 @@ const Game = (() => {
     updateLightning(dt);
     updateMeteors(dt);
     updateBlasts(dt);
+    updateTornado(dt);
     updateZombieProjectiles(dt);
 
     if (state.skills.firebomb > 0) {
@@ -2807,7 +3161,27 @@ const Game = (() => {
       }
     }
 
-    if (state.shootCooldown <= 0 && state.autoAttack) tryAttack();
+    updateMines(dt);
+    updateMineCollisions(dt);
+
+    // Vũ trụ song song: đếm ngược thời gian tồn tại
+    if (state.parallelUniverseActive) {
+      state.parallelUniverseTimer = Math.max(0, state.parallelUniverseTimer - dt);
+      if (state.parallelUniverseTimer <= 0) {
+        state.parallelUniverseActive = false;
+        state.parallelUniverseTimer = PARALLEL_UNIVERSE_COOLDOWN; // Hồi chiêu 3 phút
+        showToast("Vũ trụ song song kết thúc");
+      }
+    } else if (state.parallelUniverseTimer > 0) {
+      state.parallelUniverseTimer = Math.max(0, state.parallelUniverseTimer - dt);
+    }
+
+    updateXRay(dt);
+
+    if (state.shootCooldown <= 0 && (state.autoAttack || state.pointerShoot)) {
+        state.pointerShoot = false;
+        tryAttack();
+    }
 
     updateDarts(dt);
     updateGems(dt);
@@ -2825,10 +3199,17 @@ const Game = (() => {
 
   function pickSkillChoices() {
     const available = SKILLS.filter((skill) => state.skills[skill.id] < skill.max);
-    if (available.length <= 3) return shuffle(available);
+    const evolveable = SKILLS.filter(
+      (skill) =>
+        skill.evolve &&
+        state.skills[skill.id] >= skill.max &&
+        !state.evolved[skill.id]
+    );
+    const allAvailable = [...available, ...evolveable];
+    if (allAvailable.length <= 3) return shuffle(allAvailable);
 
     const picked = [];
-    let pool = available.slice();
+    let pool = allAvailable.slice();
     while (picked.length < 3 && pool.length > 0) {
       let totalWeight = 0;
       for (const skill of pool) {
@@ -2915,6 +3296,30 @@ const Game = (() => {
     const definition = SKILLS.find((skill) => skill.id === id);
     if (!definition) return;
     if (!state.choosing) return;
+
+    if (
+      definition.evolve &&
+      state.skills[definition.id] >= definition.max &&
+      !state.evolved[definition.id]
+    ) {
+      state.evolved[definition.id] = true;
+      state.levelUps += 1;
+      state.energy = 0;
+      state.energyMax = Math.min(
+        ENERGY_CAP,
+        Math.round(state.energyMax * ENERGY_GROWTH)
+      );
+      state.choosing = false;
+      state.cards = [];
+      if (els.skillLayer) els.skillLayer.hidden = true;
+      refreshRerollButton();
+      updateEnergyHud();
+      showToast("Da tien hoa: " + definition.evolve.name);
+      DeepwoodAudio.click();
+      focusGame();
+      return;
+    }
+
     if (state.skills[definition.id] >= definition.max) return;
 
     if (definition.id === "health") {
@@ -3183,6 +3588,8 @@ const Game = (() => {
     drawFireZones(t);
     drawBombs(t);
     drawBlasts();
+    drawMines(t);
+    drawXRay();
 
     for (const gem of state.gems) drawGem(gem, t);
 
@@ -3659,6 +4066,117 @@ const Game = (() => {
     }
   }
 
+  function drawMines(t) {
+    for (const mine of state.mines) {
+      const armed = mine.armed;
+      const pulse = 0.5 + 0.5 * Math.sin(t * (armed ? 8 : 3));
+      const flash = armed ? 1 : 0.4 + pulse * 0.3;
+
+      ctx.save();
+      ctx.translate(mine.x, mine.y);
+
+      // Mine body (dark sphere)
+      ctx.fillStyle = armed ? "#2d2d2d" : "#1a1a1a";
+      ctx.beginPath();
+      ctx.arc(0, 0, 6, 0, TAU);
+      ctx.fill();
+
+      // Trigger button (red when armed, gray when not)
+      ctx.fillStyle = armed ? "#ff4444" : "#666666";
+      ctx.beginPath();
+      ctx.arc(0, 0, 2.5, 0, TAU);
+      ctx.fill();
+
+      // Warning pulse ring when armed
+      if (armed) {
+        const ringRadius = 8 + pulse * 10;
+        const ringAlpha = Math.max(0, 1 - pulse) * 0.5;
+        ctx.strokeStyle = `rgba(255, 68, 68, ${ringAlpha})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, ringRadius, 0, TAU);
+        ctx.stroke();
+
+        // Inner glow
+        ctx.fillStyle = `rgba(255, 100, 50, ${0.3 + pulse * 0.3})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, 4 + pulse * 2, 0, TAU);
+        ctx.fill();
+      }
+
+      // Armed indicator (blinking red light)
+      if (armed && Math.sin(t * 10) > 0) {
+        ctx.fillStyle = "#ff0000";
+        ctx.beginPath();
+        ctx.arc(0, -2, 1.5, 0, TAU);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  function drawXRay() {
+    try {
+      if (!ctx || !state.skills || state.skills.xRay <= 0) return;
+      if (state.xRayLaserTimer > 1.4 || state.xRayLaserTimer <= 0) return;
+      if (!state.player || typeof state.player.x !== 'number' || typeof state.player.y !== 'number') return;
+
+      const p = state.player;
+      const target = nearestZombie(500);
+      if (!target || typeof target.x !== 'number' || typeof target.y !== 'number') return;
+
+      const dx = target.x - p.x;
+      const dy = target.y - p.y;
+      const angle = Math.atan2(dy, dx);
+      if (!isFinite(angle)) return;
+
+      const range = 500;
+      const k = 1 - (state.xRayLaserTimer / 1.5);
+      const alpha = Math.max(0, Math.min(1, 1 - k * 2));
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(angle);
+
+      // Laser beam
+      const grad = ctx.createLinearGradient(0, 0, range, 0);
+      grad.addColorStop(0, "rgba(180, 100, 255, " + alpha * 0.9 + ")");
+      grad.addColorStop(0.5, "rgba(220, 140, 255, " + alpha * 0.6 + ")");
+      grad.addColorStop(1, "rgba(180, 100, 255, 0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(-4, 2);
+      ctx.lineTo(range, 8);
+      ctx.lineTo(range, -8);
+      ctx.lineTo(-4, -2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Core beam
+      ctx.fillStyle = "rgba(255, 255, 255, " + alpha * 0.5 + ")";
+      ctx.beginPath();
+      ctx.moveTo(-1.5, 1);
+      ctx.lineTo(range * 0.9, 1.5);
+      ctx.lineTo(range * 0.9, -1.5);
+      ctx.lineTo(-1.5, -1);
+      ctx.closePath();
+      ctx.fill();
+
+      // End flash
+      const pulse = typeof t === 'number' ? Math.sin(t * 20) : 0;
+      ctx.fillStyle = "rgba(220, 140, 255, " + alpha * 0.8 + ")";
+      ctx.beginPath();
+      ctx.arc(range, 0, 8 + pulse * 2, 0, TAU);
+      ctx.fill();
+
+      ctx.restore();
+    } catch (e) {
+      // Prevent X-ray draw from freezing the game
+      try { ctx.restore(); } catch (e2) { /* ignore */ }
+    }
+  }
+
   function drawZombieProjectiles(t) {
     for (const pr of state.zombieProjectiles) {
       ctx.save();
@@ -4002,6 +4520,27 @@ const Game = (() => {
     ctx.lineTo(-6.5, 6);
     ctx.closePath();
     ctx.fill();
+
+    // Hiệu ứng đóng băng khi bị băng giá
+    if (zombie.freezeTimer > 0) {
+      const frostPulse = 0.5 + 0.5 * Math.sin(t * 10);
+      ctx.save();
+      ctx.globalAlpha = 0.5 + frostPulse * 0.3;
+      ctx.strokeStyle = "rgba(170, 226, 255, 0.9)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 11, 9, 0, 0, TAU);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(170, 226, 255, 0.15)";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 11, 9, 0, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = "rgba(220, 245, 255, 0.7)";
+      circleIn(ctx, -3, -2.5, 1.4);
+      circleIn(ctx, 2.5, -1.5, 1.1);
+      circleIn(ctx, 0, 2, 1);
+      ctx.restore();
+    }
 
     if (isWarrior) {
       ctx.fillStyle = flash > 0.2 ? "#d8e0d2" : "#5c665a";
@@ -4954,6 +5493,66 @@ const Game = (() => {
       ctx.stroke();
     }
 
+    // Enhanced shield visual when below 50% HP
+    if (state.skills.enhancedShield > 0 && state.hp < state.maxHp * 0.5) {
+      const pulse = 0.5 + 0.5 * Math.sin(t * 6);
+      const shieldAlpha = 0.3 + pulse * 0.2;
+
+      ctx.save();
+      ctx.globalAlpha = shieldAlpha;
+      ctx.strokeStyle = "#00aaff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 16, 0, TAU);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(0, 170, 255, 0.1)";
+      ctx.beginPath();
+      ctx.arc(0, 0, 16, 0, TAU);
+      ctx.fill();
+
+      // Shield segments
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 6; i++) {
+        const angle = (i / 6) * Math.PI * 2 + t * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(angle) * 14, Math.sin(angle) * 14);
+        ctx.lineTo(Math.cos(angle) * 18, Math.sin(angle) * 18);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Vũ trụ song song: hiệu ứng màu tím xung quanh người chơi
+    if (state.parallelUniverseActive) {
+      const pulse = 0.5 + 0.5 * Math.sin(t * 8);
+      const auraAlpha = 0.4 + pulse * 0.3;
+
+      ctx.save();
+      ctx.globalAlpha = auraAlpha;
+      ctx.strokeStyle = "#1800ff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 22 + pulse * 6, 0, TAU);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(24, 0, 255, 0.15)";
+      ctx.beginPath();
+      ctx.arc(0, 0, 22 + pulse * 6, 0, TAU);
+      ctx.fill();
+
+      // Purple rings rotating
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        const angle = (i / 3) * Math.PI * 2 + t * 2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(angle) * 20, Math.sin(angle) * 20);
+        ctx.lineTo(Math.cos(angle) * 26, Math.sin(angle) * 26);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     ctx.restore();
   }
 
@@ -5017,7 +5616,12 @@ const Game = (() => {
 
   canvas.addEventListener("pointerdown", (event) => {
     if (!state.active || state.paused || state.choosing || state.over || state.victory) return;
-    if (event.pointerType === "mouse") return;
+    if (event.pointerType === "mouse") {
+      if (!state.autoAttack && typeof window.Game.triggerManualShoot === "function") {
+        window.Game.triggerManualShoot();
+      }
+      return;
+    }
     event.preventDefault();
     state.pointer.active = true;
     state.pointer.x = event.clientX;
@@ -5296,6 +5900,9 @@ const Game = (() => {
   const api = {
     start,
     stop,
+    triggerManualShoot() {
+      state.pointerShoot = true;
+    },
     snapshot() {
       return {
         active: state.active,
@@ -5405,6 +6012,18 @@ const Game = (() => {
           ttl: blast.ttl,
           radius: blast.radius,
         })),
+        mineTimer: state.mineTimer,
+        mines: state.mines.map((mine) => ({
+          x: mine.x,
+          y: mine.y,
+          damage: mine.damage,
+          radius: mine.radius,
+          armed: mine.armed,
+        })),
+        parallelUniverseTimer: state.parallelUniverseTimer,
+        parallelUniverseActive: state.parallelUniverseActive,
+        xRayLaserTimer: state.xRayLaserTimer,
+        fireRateTimer: state.fireRateTimer,
         saws: state.skills.saw > 0
           ? (() => {
               const cfg = SAW_LEVELS[Math.min(state.skills.saw, SAW_LEVELS.length) - 1];
