@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=3" />
+  <link rel="stylesheet" href="css/style.css?v=7" />
 </head>
 <body>
   <canvas id="world" aria-hidden="true"></canvas>
@@ -296,6 +296,7 @@
     </section>
   </div>
 
+  <!-- ===================== ONLINE ROOM ===================== -->
   <!-- ===================== SHOP ===================== -->
   <div class="modal-layer" id="shop-modal" hidden>
     <section class="modal shop-modal" role="dialog" aria-modal="true" aria-labelledby="shop-title">
@@ -368,6 +369,50 @@
             <span class="character-option__desc">Máu 100 · Không giáp · Tốc độ -5%. Hồi 1 máu mỗi 5 giây, kể cả khi đang nhận sát thương.</span>
             <span class="character-option__state">Chọn</span>
             <span class="character-option__price">5.000 ◆</span>
+          </button>
+
+          <button class="character-option character-option--electrician" type="button" data-character="electrician" aria-pressed="false">
+            <span class="character-option__portrait" aria-hidden="true">
+              <svg viewBox="0 0 96 96" fill="none">
+                <circle cx="48" cy="48" r="45" fill="#274a68" />
+                <path d="M30 70c2-8 8-12 14-12s12 4 14 12" fill="#1e2c38" />
+                <path d="M48 30m-15 0 to 30 0 a 15 15 0 1 0 30 0 a 15 15 0 1 0 -30 0" fill="none" stroke="#c9c2a8" stroke-width="2" />
+                <circle cx="48" cy="30" r="8" fill="#ffd95e" />
+                <path d="M48 18l0-4 30 4-30 4z" fill="#ffd95e" />
+                <path d="M30 50c0-5 3-8 8-8s8 3 8 8c0 5-3 8-8 8s-8-3-8-8z" fill="#1e2c38" />
+                <path d="M66 50c0-5 3-8 8-8s8 3 8 8c0 5-3 8-8 8z" fill="#1e2c38" />
+                <circle cx="30" cy="30" r="4" fill="#e0b48a" />
+                <circle cx="66" cy="30" r="4" fill="#e0b48a" />
+                <path d="M33 38c0-3 2-5 5-5s5 2 5 5c0 3-2 5-5 5z" fill="#ffd95e" />
+              </svg>
+            </span>
+            <span class="character-option__name">Kỹ thuật viên điện</span>
+            <span class="character-option__tag">Electrician</span>
+            <span class="character-option__desc">Máu 100 · Không giáp · Tốc độ +5%. Thay phi tiêu bằng tia điện. 15% cơ hội phóng điện sang 5 zombie gần nhất, gây 10 sát thương và làm chậm 50% trong 2,5 giây.</span>
+            <span class="character-option__state">Chọn</span>
+            <span class="character-option__price">10.000 ◆</span>
+          </button>
+
+          <button class="character-option character-option--vampire" type="button" data-character="vampire" aria-pressed="false">
+            <span class="character-option__portrait" aria-hidden="true">
+              <svg viewBox="0 0 96 96" fill="none">
+                <circle cx="48" cy="48" r="45" fill="#541a2a" />
+                <path d="M30 70c2-8 8-12 14-12s12 4 14 12" fill="#8e1f34" />
+                <circle cx="48" cy="30" r="10" fill="#c8304a" />
+                <path d="M48 18l0-4 30 4-30 4z" fill="#c8304a" />
+                <path d="M30 50c0-5 3-8 8-8s8 3 8 8c0 5-3 8-8 8z" fill="#8e1f34" />
+                <path d="M66 50c0-5 3-8 8-8s8 3 8 8c0 5-3 8-8 8z" fill="#8e1f34" />
+                <circle cx="30" cy="30" r="4" fill="#e0b48a" />
+                <circle cx="66" cy="30" r="4" fill="#e0b48a" />
+                <path d="M33 38c0-3 2-5 5-5s5 2 5 5c0 3-2 5-5 5z" fill="#e8d7dc" />
+                <circle cx="48" cy="48" r="6" fill="#efe4e8" />
+              </svg>
+            </span>
+            <span class="character-option__name">Ma cà rồng</span>
+            <span class="character-option__tag">Vampire</span>
+            <span class="character-option__desc">Máu 100 · Không giáp · Tốc độ +10%. Mỗi đòn hồi 30% sát thương gây ra thành máu. Khi máu dưới 30%, sát thương tăng 40%.</span>
+            <span class="character-option__state">Chọn</span>
+            <span class="character-option__price">15.000 ◆</span>
           </button>
 
           <button class="character-option character-option--warrior" type="button" data-character="warrior" aria-pressed="false">
@@ -677,17 +722,18 @@
 
     </div>
 
-    <!-- Mobile controls (hiện trên thiết bị cảm ứng) -->
+    <!-- Mobile controls: joystick 360° (chỉ hiện trên thiết bị cảm ứng) -->
     <div class="mobile-controls" id="mobile-controls" aria-hidden="true">
-      <div class="dpad">
-        <button class="dpad__btn dpad__up" type="button" data-key="ArrowUp">▲</button>
-        <div class="dpad__row">
-          <button class="dpad__btn dpad__left" type="button" data-key="ArrowLeft">◀</button>
-          <button class="dpad__btn dpad__down" type="button" data-key="ArrowDown">▼</button>
-          <button class="dpad__btn dpad__right" type="button" data-key="ArrowRight">▶</button>
+      <div class="joystick" id="joystick">
+        <div class="joystick__base" id="joystick-base" role="application" aria-label="Joystick di chuyển 360 độ">
+          <span class="joystick__hint joystick__hint--up" aria-hidden="true">▲</span>
+          <span class="joystick__hint joystick__hint--down" aria-hidden="true">▼</span>
+          <span class="joystick__hint joystick__hint--left" aria-hidden="true">◀</span>
+          <span class="joystick__hint joystick__hint--right" aria-hidden="true">▶</span>
+          <div class="joystick__knob" id="joystick-knob"></div>
         </div>
       </div>
-      <button class="shoot-btn" type="button" id="mobile-shoot">Bắn</button>
+      <button class="shoot-btn" type="button" id="mobile-shoot" aria-label="Bắn">Bắn</button>
     </div>
   
 
@@ -791,9 +837,9 @@
 
   <p class="build-tag">Prototype v0.2</p>
 
-  <script src="js/audio.js?v=3"></script>
-  <script src="js/background.js?v=3"></script>
-  <script src="js/game.js?v=3"></script>
-  <script src="js/main.js?v=3"></script>
+  <script src="js/audio.js?v=7"></script>
+  <script src="js/background.js?v=7"></script>
+  <script src="js/game.js?v=10"></script>
+  <script src="js/main.js?v=7"></script>
 </body>
 </html>

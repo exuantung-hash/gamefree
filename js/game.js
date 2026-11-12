@@ -62,6 +62,9 @@ const Game = (() => {
   const ZOMBIE_SUMMONER_HP = 400;
   const ZOMBIE_SUMMONER_SUMMON_INTERVAL = 12;
   const ZOMBIE_SUMMONER_SUMMON_COUNT = 3;
+  const ZOMBIE_BOSS_SUMMON_INTERVAL = 4;
+  const ZOMBIE_BOSS_SUMMON_COUNT = 3;
+  const BOSS_METEOR_COUNT = 10;
   const ZOMBIE_BURROWER_HP = 300;
   const ZOMBIE_BURROWER_BURROW_INTERVAL = 10;
   const ZOMBIE_BURROWER_BURROW_DAMAGE = 30;
@@ -78,6 +81,25 @@ const Game = (() => {
   const ZOMBIE_EXPLODER_HP = 180;
   const ZOMBIE_EXPLODER_RADIUS = 132;
   const ZOMBIE_EXPLODER_DAMAGE = 26;
+  const ZOMBIE_ICE_HP = 220;
+  const ZOMBIE_ICE_SPEED_MULT = 0.9;
+  const ZOMBIE_ICE_RADIUS = 18;
+  const ZOMBIE_ICE_DAMAGE = 10;
+  const ZOMBIE_ICE_PROJ_SPEED = 420;
+  const ZOMBIE_ICE_PROJ_RANGE = 420;
+  const ZOMBIE_ICE_ZONE_RADIUS = 90;
+  const ZOMBIE_ICE_ZONE_TTL = 8;
+  const ZOMBIE_ICE_ZONE_SLOW = 0.3;
+  const ZOMBIE_ICE_ZONE_SLOW_TIME = 5;
+  const ZOMBIE_ICE_SPAWN_ZONE_INTERVAL = 1.2;
+  const ZOMBIE_FIRE_HP = 200;
+  const ZOMBIE_FIRE_SPEED_MULT = 0.95;
+  const ZOMBIE_FIRE_RADIUS = 18;
+  const ZOMBIE_FIRE_DAMAGE = 10;
+  const ZOMBIE_FIRE_PROJ_SPEED = 380;
+  const ZOMBIE_FIRE_PROJ_RANGE = 400;
+  const ZOMBIE_FIRE_ZONE_DPS = 5;
+  const ZOMBIE_FIRE_ZONE_DURATION = 5;
   const BOSS_HP_BASE = 900;
   const BOSS_HP_PER_WAVE = 55;
   const BOSS_DAMAGE = 26;
@@ -85,22 +107,35 @@ const Game = (() => {
   const TORNADO_INTERVAL = 5;
   const ENHANCED_SHIELD_DAMAGE_REDUCE = 0.3;
   const TORNADO_DAMAGE = 10;
-  const TORNADO_RADIUS = 200;
+  const TORNADO_RADIUS = 140;
+  const TORNADO_FX_TTL = 1.2;
   const MINE_INTERVAL = 10;
   const MINE_DAMAGE = 50;
   const MINE_RADIUS = 100;
   const MINE_GRACE_TIME = 1.5;
   const MINE_MAX_LEVELS = [10, 8.5, 7, 6, 5];
   const MINE_DAMAGE_LEVELS = [50, 65, 80, 95, 110];
+  const BLACK_HOLE_DURATION = 5;
+  const BLACK_HOLE_RADIUS = 130;
+  const BLACK_HOLE_PULL = 320;
+  const BLACK_HOLE_LEVELS = [
+    { cooldown: 10, dps: 5, count: 1 },
+    { cooldown: 8.5, dps: 6.5, count: 1 },
+    { cooldown: 7, dps: 8, count: 2 },
+    { cooldown: 6, dps: 9, count: 2 },
+    { cooldown: 5, dps: 10, count: 3 },
+  ];
   const PARALLEL_UNIVERSE_COOLDOWN = 180;
   const PARALLEL_UNIVERSE_DURATION = 10;
   const PARALLEL_UNIVERSE_DAMAGE_MULT = 5;
   const XRAY_DAMAGE_MULT = 3;
-  const SHIELD_HP_THRESHOLD = 0.3;
+  const XRAY_DAMAGE_LEVELS = [35, 55, 80, 110, 150];
+  const SHIELD_HP_THRESHOLD = 0.5;
   const FIRE_RATE_LEVELS = [1.5, 1.8, 2.1, 2.5, 3.0, 3.5, 4.0, 4.5, 4.8, 5.0];
-  const DOCTOR_REGEN_INTERVAL = 5;
-  const DOCTOR_REGEN_SAFE = 1;
+  const DOCTOR_REGEN_INTERVAL = 1;
+  const DOCTOR_REGEN_SAFE = 2;
   const DOCTOR_REGEN_HURT = 1;
+  const DOCTOR_SAFE_AFTER = 2;
   const HEALING_REGEN_INTERVAL = 5;
   const FIREBOMB_TTL = 5;
   const FIREBOMB_TICK = 0.5;
@@ -124,6 +159,26 @@ const Game = (() => {
     { count: 4, speed: 5.8, radius: 72, size: 11 },
     { count: 5, speed: 8, radius: 76, size: 11.5 },
   ];
+
+  const FIRE_ORB_LEVELS = [
+    { count: 1, speed: 1, damage: 10, radius: 110, size: 6 },
+    { count: 2, speed: 1.5, damage: 13, radius: 112, size: 7 },
+    { count: 3, speed: 2, damage: 16, radius: 114, size: 7 },
+    { count: 4, speed: 2.8, damage: 20, radius: 116, size: 8 },
+    { count: 5, speed: 4, damage: 25, radius: 118, size: 8 },
+  ];
+
+  const EXTENDED_DURATION_BONUS = [2, 4, 6, 8, 10];
+
+  const SKY_MISSILE_LEVELS = [
+    { count: 1, damage: 10, cooldown: 10 },
+    { count: 1, damage: 12, cooldown: 8 },
+    { count: 2, damage: 14, cooldown: 6 },
+    { count: 2, damage: 17, cooldown: 4 },
+    { count: 3, damage: 20, cooldown: 3 },
+  ];
+
+  const RESISTANCE_LEVELS = [0.05, 0.07, 0.10, 0.13, 0.15];
 
   const RARITY_TIERS = {
     common: { name: "Thường", color: "#ffffff", weight: 55 },
@@ -197,7 +252,7 @@ const Game = (() => {
       max: 1,
       rarity: "common",
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7"/><path d="M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg>',
-      desc: () => "Mỗi viên ngọc cho x5 năng lượng.",
+      desc: () => "Mỗi viên ngọc cho x3 năng lượng.",
     },
     {
       id: "triple",
@@ -337,7 +392,7 @@ const Game = (() => {
       max: 1,
       rarity: "legendary",
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>',
-      desc: () => "Khi dưới 50% máu, tạo khiên giảm 20% sát thương nhận được.",
+      desc: () => "Khi dưới 50% máu, tạo khiên giảm 30% tất cả các loại sát thương.",
     },
     {
       id: "chainLightning",
@@ -346,23 +401,35 @@ const Game = (() => {
       max: 1,
       rarity: "legendary",
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 7 10-14"/><path d="M5 12l7 7M19 12l-7 7"/></svg>',
-      desc: () => "15% cơ hội mỗi đòn phóng điện sang 3 zombie gần nhất.",
+      desc: () => "35% cơ hội mỗi đòn phóng điện sang 3 zombie gần nhất, tạo dây điện vàng nối các mục tiêu.",
     },
     {
       id: "mine",
       name: "Đặt mìn",
       tag: "Mine",
       max: 5,
-      rarity: "legendary",
+      rarity: "rare",
       evolve: {
         name: "Mìn siêu cấp",
-        desc: "Đặt mìn mỗi 5s, gây 30 sát thương.",
+        desc: "Đặt mìn mỗi 4 giây, gây 150 sát thương và bán kính nổ lớn hơn.",
       },
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4v4M12 16v4M4 12h4M16 12h4"/><path d="M9 9l3 3M15 15l-3-3"/></svg>',
       desc: function(level) {
         const interval = MINE_MAX_LEVELS[Math.min(level, MINE_MAX_LEVELS.length) - 1];
         const dmg = MINE_DAMAGE_LEVELS[Math.min(level, MINE_DAMAGE_LEVELS.length) - 1];
         return "Mỗi " + interval + "s đặt 1 quả mìn dưới chân, gây " + dmg + " sát thương diện rộng khi zombie chạm.";
+      },
+    },
+    {
+      id: "blackHole",
+      name: "Hố đen",
+      tag: "Black Hole",
+      max: 5,
+      rarity: "rare",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6a9.4 9.4 0 1 0 9.4 9.4"/><path d="M20.4 7.2A9.4 9.4 0 0 0 16 3.1"/><path d="M3.2 15.6A9.4 9.4 0 0 0 8 20.9"/></svg>',
+      desc: function(level) {
+        const cfg = BLACK_HOLE_LEVELS[Math.min(level, BLACK_HOLE_LEVELS.length) - 1];
+        return "Mỗi " + cfg.cooldown + "s tạo " + cfg.count + " hố đen dưới chân zombie, hút zombie vào và gây " + cfg.dps + " sát thương/giây trong " + BLACK_HOLE_DURATION + " giây.";
       },
     },
     {
@@ -373,6 +440,54 @@ const Game = (() => {
       rarity: "legendary",
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M12 22l-4-4M12 22l4-4"/></svg>',
       desc: () => "Mỗi 5 giây tạo lốc xoáy đẩy lùi zombie xung quanh và gây 10 sát thương.",
+    },
+    {
+      id: "fireOrb",
+      name: "Lửa ma trời",
+      tag: "Fire Orb",
+      max: 5,
+      rarity: "epic",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16Z"/><path d="M8 12l2-2 2 2M16 12l-2-2-2 2"/></svg>',
+      desc: (level) => {
+        const cfg = FIRE_ORB_LEVELS[Math.min(level, FIRE_ORB_LEVELS.length) - 1];
+        return "Tạo " + cfg.count + " ngọn lửa xoay xung quanh người chơi, mỗi ngọn gây " + cfg.damage + " sát thương và đốt cháy zombie chạm vào.";
+      },
+    },
+    {
+      id: "extendedDuration",
+      name: "Giai đoạn mở rộng",
+      tag: "Extended Duration",
+      max: 5,
+      rarity: "epic",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M6 12h12"/><path d="M12 8l2 2 4-4M12 16l-2-2-4 4"/></svg>',
+      desc: (level) => {
+        const bonus = EXTENDED_DURATION_BONUS[Math.min(level, EXTENDED_DURATION_BONUS.length) - 1];
+        return "Tăng " + bonus + "s thời gian tồn tại của Vũ trụ song song và các kỹ năng có thời hạn.";
+      },
+    },
+    {
+      id: "skyMissile",
+      name: "Tên lửa trời",
+      tag: "Sky Missile",
+      max: 5,
+      rarity: "epic",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2 6M12 22l-2-6M2 12l6 2M22 12l-6-2M6 6l12 12M18 6l-12 12"/></svg>',
+      desc: (level) => {
+        const cfg = SKY_MISSILE_LEVELS[Math.min(level, SKY_MISSILE_LEVELS.length) - 1];
+        return "Mỗi " + cfg.cooldown + "s bắn " + cfg.count + " tên lửa từ trên trời xuống, mỗi quả gây " + cfg.damage + " sát thương.";
+      },
+    },
+    {
+      id: "resistance",
+      name: "Sức đề kháng",
+      tag: "Resistance",
+      max: 5,
+      rarity: "epic",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+      desc: (level) => {
+        const pct = Math.round(RESISTANCE_LEVELS[Math.min(level, RESISTANCE_LEVELS.length) - 1] * 100);
+        return "Giảm " + pct + "% sát thương nhận được từ mọi nguồn.";
+      },
     },
     {
       id: "parallelUniverse",
@@ -390,7 +505,10 @@ const Game = (() => {
       max: 5,
       rarity: "rare",
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l4 16M2 12h16M8 8l8 8M16 8l-8 8"/></svg>',
-      desc: (level) => "Tia laser xuyên qua mọi zombie, gây x3 sát thương zombie chiến binh.",
+      desc: (level) => {
+        const dmg = XRAY_DAMAGE_LEVELS[Math.min(level, XRAY_DAMAGE_LEVELS.length) - 1];
+        return "Bắn tia X-quang xuyên qua mọi zombie trên đường thẳng, gây " + dmg + " sát thương (x3 với zombie chiến binh).";
+      },
     },
     {
       id: "fireRate",
@@ -470,7 +588,7 @@ const Game = (() => {
       speed: 0.95,
       skin: "doctor",
       price: 5000,
-      desc: "Máu 100 · Không giáp · Tốc độ -5%. Hồi 1 máu mỗi 5 giây, kể cả khi đang nhận sát thương.",
+      desc: "Máu 100 · Không giáp · Tốc độ -5%. Hồi 1 máu/giây khi đang nhận sát thương và 2 máu/giây khi an toàn.",
     },
     warrior: {
       id: "warrior",
@@ -525,6 +643,7 @@ const Game = (() => {
     timerText: "",
     keys: new Set(),
     pointer: { active: false, x: 0, y: 0 },
+    joystick: { x: 0, y: 0, active: false },
     player: { x: 0, y: 0, vx: 0, vy: 0, face: Math.PI / 2, walk: 0 },
     camera: { x: 0, y: 0 },
     characterId: DEFAULT_CHARACTER,
@@ -542,6 +661,7 @@ const Game = (() => {
     gems: [],
     poisonZones: [],
     fireZones: [],
+    iceZones: [],
     bombs: [],
     slashes: [],
     zombieProjectiles: [],
@@ -580,17 +700,31 @@ const Game = (() => {
     firebombTimer: 0,
     meteorTimer: 0,
     mineTimer: 0,
+    blackHoleTimer: 0,
     parallelUniverseTimer: 0,
     parallelUniverseActive: false,
     xRayLaserTimer: 0,
+    xRayBeam: null,
+    xRayBeams: [],
     fireRateTimer: 0,
     evolved: {},
     tornadoTimer: 0,
+    tornadoFx: 0,
     meteors: [],
     mines: [],
+    blackHoles: [],
+    chainBolts: [],
     sawAngle: 0,
+    bossSummonTimer: 0,
+    fireOrbAngle: 0,
+    extendedDurationBonus: 0,
+    skyMissileTimer: 0,
+    skyMissiles: [],
+    resistanceBonus: 0,
     playerSlowTimer: 0,
     playerSlowMult: 1,
+    playerBurnTimer: 0,
+    playerBurnDps: 0,
     lightningTimer: 0,
     lightningStrikes: [],
     lightningFlash: 0,
@@ -619,7 +753,23 @@ const Game = (() => {
 
   const rand = (min, max) => min + Math.random() * (max - min);
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-  const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
+  const distSq = (ax, ay, bx, by) => {
+    const dx = ax - bx;
+    const dy = ay - by;
+    return dx * dx + dy * dy;
+  };
+  const dist = (ax, ay, bx, by) => Math.sqrt(distSq(ax, ay, bx, by));
+
+  function inView(x, y, margin = 120) {
+    const left = state.camera.x - margin;
+    const top = state.camera.y - margin;
+    return (
+      x >= left &&
+      x <= left + state.w + margin * 2 &&
+      y >= top &&
+      y <= top + state.h + margin * 2
+    );
+  }
 
   function formatTime(seconds) {
     const s = Math.max(0, Math.floor(seconds));
@@ -1004,6 +1154,7 @@ const Game = (() => {
   }
 
   function ensureWorldSprites() {
+    ensureFxSprites();
     if (!glowGold) glowGold = makeGlow("rgba(255, 248, 205, 0.95)", "rgba(246, 218, 128, 0.5)");
     if (!glowGreen) glowGreen = makeGlow("rgba(225, 255, 235, 0.92)", "rgba(80, 220, 130, 0.45)");
     if (!glowRed) glowRed = makeGlow("rgba(255, 242, 226, 0.95)", "rgba(232, 72, 58, 0.52)");
@@ -1067,6 +1218,495 @@ const Game = (() => {
     if (propCache.size > 900) propCache.clear();
     propCache.set(key, list);
     return list;
+  }
+
+  // ------------------------------------------------------------
+  // Sprite cache dùng chung cho hiệu ứng (tối ưu hiệu năng)
+  // ------------------------------------------------------------
+  let fxSprites = null;
+
+  function makeSpriteCanvas(w, h) {
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    return c;
+  }
+
+  function makeRadialSprite(size, stops) {
+    const c = makeSpriteCanvas(size, size);
+    const g = c.getContext("2d");
+    const half = size / 2;
+    const grad = g.createRadialGradient(half, half, 0, half, half, half);
+    for (const stop of stops) grad.addColorStop(stop[0], stop[1]);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+    return c;
+  }
+
+  function makeSawSprite() {
+    const size = 64;
+    const c = makeSpriteCanvas(size, size);
+    const g = c.getContext("2d");
+    const s = 14;
+    g.translate(size / 2, size / 2);
+
+    g.fillStyle = "#b9c8d2";
+    for (let j = 0; j < 8; j += 1) {
+      const tooth = (j / 8) * TAU;
+      g.save();
+      g.rotate(tooth);
+      g.beginPath();
+      g.moveTo(s * 0.72, -s * 0.2);
+      g.lineTo(s * 1.24, 0);
+      g.lineTo(s * 0.72, s * 0.2);
+      g.closePath();
+      g.fill();
+      g.restore();
+    }
+
+    const blade = g.createLinearGradient(-s, -s, s, s);
+    blade.addColorStop(0, "#eef5f8");
+    blade.addColorStop(0.5, "#9cacb8");
+    blade.addColorStop(1, "#596871");
+    g.fillStyle = blade;
+    g.beginPath();
+    g.arc(0, 0, s * 0.82, 0, TAU);
+    g.fill();
+
+    g.strokeStyle = "rgba(245, 251, 255, 0.65)";
+    g.lineWidth = 1;
+    g.beginPath();
+    g.arc(0, 0, s * 0.58, 0, TAU);
+    g.stroke();
+
+    g.fillStyle = "#33424a";
+    circleIn(g, 0, 0, s * 0.3);
+    g.fillStyle = "#d7a63f";
+    circleIn(g, 0, 0, s * 0.13);
+    return c;
+  }
+
+  function makeOrbCoreSprite() {
+    const size = 64;
+    const c = makeSpriteCanvas(size, size);
+    const g = c.getContext("2d");
+    const half = size / 2;
+    const grad = g.createRadialGradient(half, half, 0, half, half, half);
+    grad.addColorStop(0, "rgba(255, 255, 244, 1)");
+    grad.addColorStop(0.12, "rgba(255, 248, 204, 1)");
+    grad.addColorStop(0.32, "rgba(255, 214, 104, 0.98)");
+    grad.addColorStop(0.58, "rgba(255, 150, 48, 0.95)");
+    grad.addColorStop(0.82, "rgba(255, 84, 16, 0.6)");
+    grad.addColorStop(1, "rgba(210, 34, 0, 0)");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+    return c;
+  }
+
+  function makeOrbTongueSprite() {
+    const w = 48;
+    const h = 72;
+    const c = makeSpriteCanvas(w, h);
+    const g = c.getContext("2d");
+    g.beginPath();
+    g.moveTo(w / 2, h);
+    g.bezierCurveTo(2, h * 0.74, 8, h * 0.38, w / 2, 2);
+    g.bezierCurveTo(w - 8, h * 0.38, w - 2, h * 0.74, w / 2, h);
+    g.closePath();
+    const grad = g.createLinearGradient(0, h, 0, 0);
+    grad.addColorStop(0, "rgba(255, 246, 196, 1)");
+    grad.addColorStop(0.28, "rgba(255, 196, 78, 0.92)");
+    grad.addColorStop(0.68, "rgba(255, 116, 30, 0.55)");
+    grad.addColorStop(1, "rgba(255, 70, 10, 0)");
+    g.fillStyle = grad;
+    g.fill();
+    return c;
+  }
+
+  function makeFlameSprite() {
+    const w = 32;
+    const h = 52;
+    const c = makeSpriteCanvas(w, h);
+    const g = c.getContext("2d");
+    g.beginPath();
+    g.moveTo(w / 2, h);
+    g.bezierCurveTo(1, h * 0.74, 7, h * 0.3, w / 2, 2);
+    g.bezierCurveTo(w - 7, h * 0.3, w - 1, h * 0.74, w / 2, h);
+    g.closePath();
+    const grad = g.createLinearGradient(0, h, 0, 0);
+    grad.addColorStop(0, "rgba(255, 240, 158, 0.95)");
+    grad.addColorStop(0.32, "rgba(255, 168, 54, 0.85)");
+    grad.addColorStop(0.72, "rgba(222, 58, 12, 0.42)");
+    grad.addColorStop(1, "rgba(170, 22, 0, 0)");
+    g.fillStyle = grad;
+    g.fill();
+    return c;
+  }
+
+  function makeBombSprite() {
+    const size = 32;
+    const c = makeSpriteCanvas(size, size);
+    const g = c.getContext("2d");
+    g.translate(size / 2, size / 2);
+
+    const body = g.createLinearGradient(-7, -8, 7, 8);
+    body.addColorStop(0, "#5d665e");
+    body.addColorStop(0.55, "#2c352f");
+    body.addColorStop(1, "#141b16");
+    g.fillStyle = body;
+    g.beginPath();
+    g.arc(0, 0, 7.2, 0, TAU);
+    g.fill();
+
+    g.strokeStyle = "rgba(210, 226, 208, 0.4)";
+    g.lineWidth = 1;
+    g.beginPath();
+    g.arc(0, 0, 7.2, Math.PI * 1.05, Math.PI * 1.85);
+    g.stroke();
+
+    g.fillStyle = "#6f4b2a";
+    g.fillRect(-1.4, -11.4, 2.8, 4.2);
+    g.fillStyle = "#ffd27a";
+    circleIn(g, 0, -12.2, 2.1);
+    g.fillStyle = "#fff3c8";
+    circleIn(g, 0, -12.8, 1);
+    return c;
+  }
+
+  function makeLightningBeamSprite() {
+    const w = 44;
+    const h = 640;
+    const c = makeSpriteCanvas(w, h);
+    const g = c.getContext("2d");
+    const beam = g.createLinearGradient(0, 0, 0, h);
+    beam.addColorStop(0, "rgba(140, 190, 255, 0)");
+    beam.addColorStop(0.55, "rgba(160, 205, 255, 0.10)");
+    beam.addColorStop(1, "rgba(210, 236, 255, 0.20)");
+    g.fillStyle = beam;
+    g.fillRect(0, 0, w, h);
+    return c;
+  }
+
+  function makeMeteorTrailSprite() {
+    const w = 32;
+    const h = 140;
+    const c = makeSpriteCanvas(w, h);
+    const g = c.getContext("2d");
+    const trail = g.createLinearGradient(0, h, 0, 4);
+    trail.addColorStop(0, "rgba(255, 220, 150, 0.72)");
+    trail.addColorStop(0.45, "rgba(255, 138, 44, 0.28)");
+    trail.addColorStop(1, "rgba(255, 120, 32, 0)");
+    g.fillStyle = trail;
+    g.beginPath();
+    g.moveTo(1, h - 4);
+    g.quadraticCurveTo(10, h * 0.5, 14, 4);
+    g.lineTo(18, 4);
+    g.quadraticCurveTo(23, h * 0.5, 31, h - 4);
+    g.closePath();
+    g.fill();
+    return c;
+  }
+
+  function makeXRayGlowSprite() {
+    const w = 512;
+    const h = 40;
+    const c = makeSpriteCanvas(w, h);
+    const g = c.getContext("2d");
+    const glow = g.createLinearGradient(0, 0, w, 0);
+    glow.addColorStop(0, "rgba(180, 100, 255, 0.42)");
+    glow.addColorStop(0.45, "rgba(220, 140, 255, 0.24)");
+    glow.addColorStop(1, "rgba(180, 100, 255, 0)");
+    g.fillStyle = glow;
+    g.beginPath();
+    g.moveTo(0, h / 2 - 7);
+    g.lineTo(w, h / 2 - 20);
+    g.lineTo(w, h / 2 + 20);
+    g.lineTo(0, h / 2 + 7);
+    g.closePath();
+    g.fill();
+    return c;
+  }
+
+  function makeXRayBeamSprite() {
+    const w = 512;
+    const h = 24;
+    const c = makeSpriteCanvas(w, h);
+    const g = c.getContext("2d");
+    const grad = g.createLinearGradient(0, 0, w, 0);
+    grad.addColorStop(0, "rgba(180, 100, 255, 0.95)");
+    grad.addColorStop(0.5, "rgba(220, 140, 255, 0.7)");
+    grad.addColorStop(1, "rgba(180, 100, 255, 0)");
+    g.fillStyle = grad;
+    g.beginPath();
+    g.moveTo(0, h / 2 - 3);
+    g.lineTo(w, h / 2 - 11);
+    g.lineTo(w, h / 2 + 11);
+    g.lineTo(0, h / 2 + 3);
+    g.closePath();
+    g.fill();
+    return c;
+  }
+
+  function makeBlackHoleDiscSprite() {
+    const size = 256;
+    const c = makeSpriteCanvas(size, size);
+    const g = c.getContext("2d");
+    const half = size / 2;
+    const grad = g.createRadialGradient(half, half, 0, half, half, half);
+    grad.addColorStop(0, "rgba(2, 0, 8, 1)");
+    grad.addColorStop(0.82, "rgba(2, 0, 8, 1)");
+    grad.addColorStop(0.95, "rgba(3, 0, 10, 0.72)");
+    grad.addColorStop(1, "rgba(3, 0, 10, 0)");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+    return c;
+  }
+
+  function makeBlackHoleCoreSprite() {
+    return makeRadialSprite(64, [
+      [0, "rgba(1, 0, 5, 1)"],
+      [0.86, "rgba(1, 0, 5, 1)"],
+      [1, "rgba(1, 0, 5, 0)"],
+    ]);
+  }
+
+  function makeBurnOverlaySprite(variant) {
+    const size = 64;
+    const c = makeSpriteCanvas(size, size);
+    const g = c.getContext("2d");
+    const flame = makeFlameSprite();
+    const baseX = size / 2;
+    const baseY = 54;
+
+    const ground = g.createRadialGradient(baseX, baseY + 2, 2, baseX, baseY + 2, 26);
+    ground.addColorStop(0, "rgba(255, 128, 36, 0.3)");
+    ground.addColorStop(1, "rgba(255, 60, 0, 0)");
+    g.fillStyle = ground;
+    g.beginPath();
+    g.ellipse(baseX, baseY + 2, 26, 11, 0, 0, TAU);
+    g.fill();
+
+    const flames = [
+      { x: -8, base: 2, sway: 2.8, h: 15, w: 9 },
+      { x: 0, base: 0, sway: 3.6, h: 22, w: 10.5 },
+      { x: 8, base: 2, sway: 2.4, h: 14, w: 8.5 },
+      { x: -3, base: 4, sway: 3.1, h: 18, w: 9 },
+      { x: 4, base: 5, sway: 2.6, h: 12, w: 8 },
+    ];
+
+    for (let f = 0; f < flames.length; f += 1) {
+      const fdef = flames[f];
+      const vary = variant === 0
+        ? Math.sin(f * 1.7) * 2.2
+        : Math.cos(f * 1.4) * 2.6;
+      const height = fdef.h * (variant === 0 ? 1 : 0.92);
+      g.save();
+      g.translate(baseX + fdef.x + fdef.sway * 0.45 + vary, baseY + fdef.base);
+      g.rotate((fdef.sway + vary) * 0.045);
+      g.drawImage(flame, -fdef.w / 2, -height, fdef.w, height);
+      g.restore();
+    }
+    return c;
+  }
+
+  function makeMissileFlameSprite() {
+    return makeRadialSprite(32, [
+      [0, "rgba(255, 247, 192, 1)"],
+      [0.45, "rgba(255, 212, 111, 0.95)"],
+      [0.78, "rgba(255, 128, 42, 0.5)"],
+      [1, "rgba(255, 96, 24, 0)"],
+    ]);
+  }
+
+  function makeProjectileSprite(kind) {
+    const size = 40;
+    const c = makeSpriteCanvas(size, size);
+    const g = c.getContext("2d");
+    g.translate(size / 2, size / 2);
+    g.lineCap = "round";
+    g.lineJoin = "round";
+
+    if (kind === "arrow") {
+      g.strokeStyle = "#d8f7ff";
+      g.lineWidth = 1.7;
+      g.beginPath();
+      g.moveTo(10, 0);
+      g.lineTo(28, 0);
+      g.stroke();
+      g.fillStyle = "#d8f7ff";
+      g.beginPath();
+      g.moveTo(12, -1.6);
+      g.lineTo(5, 0);
+      g.lineTo(12, 1.6);
+      g.closePath();
+      g.fill();
+    } else if (kind === "iceball") {
+      g.fillStyle = "#aee0ff";
+      g.beginPath();
+      g.arc(20, 0, 5, 0, TAU);
+      g.fill();
+      g.strokeStyle = "#ffffff";
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.arc(20, 0, 3, 0, TAU);
+      g.stroke();
+    } else if (kind === "fireball") {
+      g.fillStyle = "#ff9a4a";
+      g.beginPath();
+      g.arc(20, 0, 6, 0, TAU);
+      g.fill();
+      g.strokeStyle = "#ffd06b";
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.arc(20, 0, 3, 0, TAU);
+      g.stroke();
+    } else {
+      g.strokeStyle = "#e3c282";
+      g.lineWidth = 2.8;
+      g.beginPath();
+      g.moveTo(10, 0);
+      g.lineTo(28, 0);
+      g.stroke();
+      g.fillStyle = "#a4723c";
+      g.beginPath();
+      g.moveTo(12, -2);
+      g.lineTo(5, 0);
+      g.lineTo(12, 2);
+      g.closePath();
+      g.fill();
+    }
+    return c;
+  }
+
+  function makeMineSprite(armed) {
+    const size = 24;
+    const c = makeSpriteCanvas(size, size);
+    const g = c.getContext("2d");
+    g.translate(size / 2, size / 2);
+    g.fillStyle = armed ? "#2d2d2d" : "#1a1a1a";
+    circleIn(g, 0, 0, 6);
+    g.fillStyle = armed ? "#ff4444" : "#666666";
+    circleIn(g, 0, 0, 2.5);
+    return c;
+  }
+
+  function makeGemSprite(kind) {
+    const size = 48;
+    const c = makeSpriteCanvas(size, size);
+    const g = c.getContext("2d");
+    g.translate(24, 25);
+    g.scale(2.4, 2.4);
+    const isRed = kind === "red";
+    const isGold = kind === "gold";
+    const grad = g.createLinearGradient(-7, -8, 7, 8);
+    if (isRed) {
+      grad.addColorStop(0, "#fff2e6");
+      grad.addColorStop(0.4, "#ff8a6f");
+      grad.addColorStop(1, "#b0242a");
+    } else if (isGold) {
+      grad.addColorStop(0, "#fff7c0");
+      grad.addColorStop(0.4, "#ffd46f");
+      grad.addColorStop(1, "#c99a00");
+    } else {
+      grad.addColorStop(0, "#efffe9");
+      grad.addColorStop(0.4, "#7df0a8");
+      grad.addColorStop(1, "#1f9a58");
+    }
+    g.fillStyle = grad;
+    g.beginPath();
+    g.moveTo(0, -9);
+    g.lineTo(6.4, -2);
+    g.lineTo(3.8, 8);
+    g.lineTo(-3.8, 8);
+    g.lineTo(-6.4, -2);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = isRed
+      ? "rgba(255, 224, 210, 0.85)"
+      : isGold
+        ? "rgba(255, 230, 160, 0.9)"
+        : "rgba(224, 255, 232, 0.75)";
+    g.lineWidth = 0.8;
+    g.stroke();
+
+    g.fillStyle = "rgba(255, 255, 255, 0.85)";
+    g.beginPath();
+    g.moveTo(-2, -5.5);
+    g.lineTo(2.4, -2.8);
+    g.lineTo(-0.6, 0.2);
+    g.lineTo(-4.4, -2.5);
+    g.closePath();
+    g.fill();
+    return c;
+  }
+
+  function ensureFxSprites() {
+    if (fxSprites) return fxSprites;
+    fxSprites = {
+      aura: new Map(),
+      tone: new Map(),
+      zone: new Map(),
+      saw: makeSawSprite(),
+      orbCore: makeOrbCoreSprite(),
+      orbTongue: makeOrbTongueSprite(),
+      flame: makeFlameSprite(),
+      bomb: makeBombSprite(),
+      lightningBeam: makeLightningBeamSprite(),
+      meteorTrail: makeMeteorTrailSprite(),
+      xRayGlow: makeXRayGlowSprite(),
+      xRayBeam: makeXRayBeamSprite(),
+      blackHoleDisc: makeBlackHoleDiscSprite(),
+      blackHoleCore: makeBlackHoleCoreSprite(),
+      missileFlame: makeMissileFlameSprite(),
+      burnOverlay: [makeBurnOverlaySprite(0), makeBurnOverlaySprite(1)],
+      mines: {
+        armed: makeMineSprite(true),
+        idle: makeMineSprite(false),
+      },
+      projectiles: {
+        arrow: makeProjectileSprite("arrow"),
+        iceball: makeProjectileSprite("iceball"),
+        fireball: makeProjectileSprite("fireball"),
+        spear: makeProjectileSprite("spear"),
+      },
+      gems: {
+        green: makeGemSprite("green"),
+        red: makeGemSprite("red"),
+        gold: makeGemSprite("gold"),
+      },
+    };
+    return fxSprites;
+  }
+
+  function getToneSprite(tone) {
+    const cache = ensureFxSprites().tone;
+    const cached = cache.get(tone);
+    if (cached) return cached;
+    const sprite = makeRadialSprite(64, [
+      [0, `rgba(${tone}, 1)`],
+      [0.42, `rgba(${tone}, 0.68)`],
+      [1, `rgba(${tone}, 0)`],
+    ]);
+    cache.set(tone, sprite);
+    return sprite;
+  }
+
+  function getAuraSprite(key, inner, mid) {
+    const cache = ensureFxSprites().aura;
+    const cached = cache.get(key);
+    if (cached) return cached;
+    const sprite = makeGlow(inner, mid);
+    cache.set(key, sprite);
+    return sprite;
+  }
+
+  function getZoneSprite(key, stops) {
+    const cache = ensureFxSprites().zone;
+    const cached = cache.get(key);
+    if (cached) return cached;
+    const sprite = makeRadialSprite(128, stops);
+    cache.set(key, sprite);
+    return sprite;
   }
 
   const MONEY_KEY = "deepwood.money.v1";
@@ -1192,11 +1832,14 @@ const Game = (() => {
   }
 
   function floatText(x, y, text, tone) {
+    if (state.texts.length >= 80) return;
     state.texts.push({ x, y, text, tone, life: 0, ttl: 0.95 });
   }
 
   function burst(x, y, count, tone, minSpeed = 40, maxSpeed = 150) {
+    const cap = 420;
     for (let i = 0; i < count; i += 1) {
+      if (state.particles.length >= cap) return;
       const angle = rand(0, TAU);
       const speed = rand(minSpeed, maxSpeed);
       state.particles.push({
@@ -1310,6 +1953,10 @@ const Game = (() => {
       const chance = Math.min(0.10, (0.015 + (state.wave - 30) * 0.001) * state.mode.special);
       if (Math.random() < chance) return "burrower";
     }
+    if (state.wave >= 25 && state.wave <= 100) {
+      const chance = Math.min(0.10, (0.015 + (state.wave - 25) * 0.001) * state.mode.special);
+      if (Math.random() < chance) return "ice";
+    }
     if (state.wave >= 40) {
       const chance = Math.min(0.09, (0.012 + (state.wave - 40) * 0.0009) * state.mode.special);
       if (Math.random() < chance) return "summoner";
@@ -1321,6 +1968,14 @@ const Game = (() => {
     if (state.wave >= 42) {
       const chance = Math.min(0.12, (0.028 + (state.wave - 42) * 0.0016) * state.mode.special);
       if (Math.random() < chance) return "exploder";
+    }
+    if (state.wave >= 10 && state.wave <= 100) {
+      const chance = Math.min(0.10, (0.015 + (state.wave - 10) * 0.001) * state.mode.special);
+      if (Math.random() < chance) return "exploder";
+    }
+    if (state.wave >= 30 && state.wave <= 100) {
+      const chance = Math.min(0.09, (0.012 + (state.wave - 30) * 0.0009) * state.mode.special);
+      if (Math.random() < chance) return "fire";
     }
     if (state.wave >= 50) {
       const chance = Math.min(0.11, (0.025 + (state.wave - 50) * 0.0015) * state.mode.special);
@@ -1387,13 +2042,21 @@ const Game = (() => {
       hp = ZOMBIE_EXPLODER_HP + (state.wave - 1) * ZOMBIE_HP_PER_WAVE;
       speed *= 0.95;
       radius = 19;
+    } else if (variant === "ice") {
+      hp = ZOMBIE_ICE_HP + (state.wave - 1) * ZOMBIE_HP_PER_WAVE;
+      speed *= ZOMBIE_ICE_SPEED_MULT;
+      radius = ZOMBIE_ICE_RADIUS;
+    } else if (variant === "fire") {
+      hp = ZOMBIE_FIRE_HP + (state.wave - 1) * ZOMBIE_HP_PER_WAVE;
+      speed *= ZOMBIE_FIRE_SPEED_MULT;
+      radius = ZOMBIE_FIRE_RADIUS;
     } else if (variant === "mutant") {
       hp = ZOMBIE_MUTANT_HP + (state.wave - 1) * ZOMBIE_HP_PER_WAVE;
       speed *= 0.82;
       radius = 24;
     } else if (variant === "boss") {
       hp = BOSS_HP_BASE + (state.wave - 1) * BOSS_HP_PER_WAVE;
-      speed *= 0.62;
+      speed *= 0.85;
       radius = 38;
     }
 
@@ -1435,6 +2098,7 @@ const Game = (() => {
       isBoss: variant === "boss",
       regenTimer: 0,
       fuse: 0,
+      iceZoneTimer: 0,
       dead: false,
     };
   }
@@ -1489,6 +2153,31 @@ const Game = (() => {
     state.totalSpawned += 1;
     state.bossCount += 1;
     state.shake = Math.max(state.shake, 0.55);
+    state.bossSummonTimer = ZOMBIE_BOSS_SUMMON_INTERVAL;
+
+    // Trùm triệu hồi 10 thiên thạch rơi xung quanh mình
+    for (let i = 0; i < BOSS_METEOR_COUNT; i += 1) {
+      const a = rand(0, TAU);
+      const r = rand(60, 220);
+      state.meteors.push({
+        startX: boss.x + Math.cos(a) * r + rand(-150, 150),
+        startY: boss.y + Math.sin(a) * r - rand(430, 560),
+        x: boss.x + Math.cos(a) * r,
+        y: boss.y + Math.sin(a) * r,
+        tx: boss.x + Math.cos(a) * r,
+        ty: boss.y + Math.sin(a) * r,
+        fall: 0,
+        delay: rand(0.48, 0.72),
+        radius: 96,
+        damage: 60,
+        burnDps: 6,
+        burnTime: 4,
+        impacted: false,
+        impactLife: 0,
+        seed: rand(0, 1000),
+      });
+    }
+
     if (showAlert) showToast(`Đợt ${state.wave} · Trùm xuất hiện!`);
     DeepwoodAudio.toxic();
     return boss;
@@ -1553,6 +2242,16 @@ const Game = (() => {
     ) {
       const cfg = BURN_LEVELS[Math.min(state.skills.burn, BURN_LEVELS.length) - 1];
       applyBurn(zombie, cfg.dps, cfg.duration);
+    }
+
+    // Nửa hỏa gây x3 sát thương zombie băng
+    const fireActive =
+      state.skills.burn > 0 ||
+      state.skills.firebomb > 0 ||
+      state.skills.meteor > 0 ||
+      state.skills.lightning > 0;
+    if (fireActive && zombie.type === "ice") {
+      zombie.hp = Math.max(0, zombie.hp - Math.floor(amount * 2));
     }
   }
 
@@ -1666,6 +2365,14 @@ const Game = (() => {
   }
 
   function updateXRay(dt) {
+    // Xóa beam đã hết thời gian
+    for (let i = state.xRayBeams.length - 1; i >= 0; i -= 1) {
+      state.xRayBeams[i].life += dt;
+      if (state.xRayBeams[i].life >= state.xRayBeams[i].ttl) {
+        state.xRayBeams.splice(i, 1);
+      }
+    }
+
     try {
       if (!state.skills || state.skills.xRay <= 0) return;
       if (!state.player) return;
@@ -1673,60 +2380,77 @@ const Game = (() => {
       state.xRayLaserTimer = Math.max(0, state.xRayLaserTimer - dt);
       if (state.xRayLaserTimer > 0) return;
 
-      // X-ray fires every 1.5 seconds
+      // X-quang bắn mỗi 1.5 giây
       state.xRayLaserTimer = 1.5;
 
       const p = state.player;
-      if (!p || typeof p.x !== 'number' || typeof p.y !== 'number') return;
+      if (!p || typeof p.x !== "number" || typeof p.y !== "number") return;
 
       const target = nearestZombie(500);
-      if (!target || typeof target.x !== 'number' || typeof target.y !== 'number') return;
+      if (!target || typeof target.x !== "number" || typeof target.y !== "number") return;
 
-      const dx = target.x - p.x;
-      const dy = target.y - p.y;
-      const angle = Math.atan2(dy, dx);
-      if (!isFinite(angle)) return;
+      const baseAngle = Math.atan2(target.y - p.y, target.x - p.x);
+      if (!isFinite(baseAngle)) return;
 
-      const range = 500;
-      const endX = p.x + Math.cos(angle) * range;
-      const endY = p.y + Math.sin(angle) * range;
+      const level = Math.min(state.skills.xRay, XRAY_DAMAGE_LEVELS.length);
+      const baseDamage = XRAY_DAMAGE_LEVELS[level - 1];
 
-      const lineLen = Math.hypot(endY - p.y, endX - p.x);
-      if (!isFinite(lineLen) || lineLen <= 0) return;
+      // Cấp 5 bắn 3 tia cùng lúc (góc chính, lệch trái, lệch phải)
+      const beamCount = level >= 5 ? 3 : 1;
+      const angleSpread = level >= 5 ? 0.25 : 0; // ~14 độ mỗi bên
 
-      // Laser beam visual - short lived blast
+      for (let b = 0; b < beamCount; b += 1) {
+        const angle = baseAngle + (b - (beamCount - 1) / 2) * angleSpread;
+        const dirX = Math.cos(angle);
+        const dirY = Math.sin(angle);
+        const range = 500;
+
+        // Lưu tia bắn để vẽ đúng hướng và đúng thời điểm
+        state.xRayBeams.push({
+          x: p.x,
+          y: p.y,
+          angle,
+          range,
+          life: 0,
+          ttl: 0.4,
+        });
+      }
+
+      // Hiệu ứng lóe tại nòng (chỉ 1 lần)
       state.blasts.push({
         x: p.x,
         y: p.y,
         life: 0,
         ttl: 0.2,
-        radius: 6,
+        radius: 8,
         tone: "180, 100, 255",
       });
 
-      // Fire laser in a line - damage all zombies in path
-      for (let i = 0; i < state.zombies.length; i++) {
-        const zombie = state.zombies[i];
-        if (!zombie || zombie.dead) continue;
-        if (typeof zombie.x !== 'number' || typeof zombie.y !== 'number') continue;
+      // Gây sát thương cho mọi tia
+      for (let b = 0; b < beamCount; b += 1) {
+        const angle = baseAngle + (b - (beamCount - 1) / 2) * angleSpread;
+        const dirX = Math.cos(angle);
+        const dirY = Math.sin(angle);
+        const range = 500;
 
-        // Check if zombie is close to the laser line
-        const distToLine = Math.abs(
-          (endY - p.y) * zombie.x -
-          (endX - p.x) * zombie.y +
-          endX * p.y -
-          endY * p.x
-        ) / lineLen;
+        // Chỉ gây sát thương cho zombie nằm trong đoạn tia, không xuyên ra sau lưng
+        for (let i = 0; i < state.zombies.length; i += 1) {
+          const zombie = state.zombies[i];
+          if (!zombie || zombie.dead) continue;
+          if (typeof zombie.x !== "number" || typeof zombie.y !== "number") continue;
 
-        if (!isFinite(distToLine)) continue;
+          const relX = zombie.x - p.x;
+          const relY = zombie.y - p.y;
+          const projection = relX * dirX + relY * dirY;
+          if (projection < -12 || projection > range + 12) continue;
 
-        if (distToLine <= (zombie.radius || 10) + 8) {
-          let dmg = Math.max(1, BASE_DAMAGE + (state.skills.heavy || 0) * 2);
-          // X3 damage to warrior zombies
-          if (zombie.type === "warrior") {
-            dmg *= XRAY_DAMAGE_MULT;
-          }
-          damageZombie(zombie, Math.floor(dmg), {
+          const perpendicular = Math.abs(relX * dirY - relY * dirX);
+          if (perpendicular > (zombie.radius || 10) + 13) continue;
+
+          let dmg = baseDamage;
+          if (zombie.type === "warrior") dmg *= XRAY_DAMAGE_MULT;
+
+          damageZombie(zombie, Math.max(1, Math.round(dmg)), {
             quiet: true,
             tone: "180, 100, 255",
             count: 4,
@@ -1752,7 +2476,7 @@ const Game = (() => {
       tick: 0.18,
       phase: rand(0, TAU),
     });
-    if (state.poisonZones.length > 10) state.poisonZones.shift();
+    if (state.poisonZones.length > 6) state.poisonZones.shift();
   }
 
   function spawnFireZone(x, y, dps, radius) {
@@ -1808,14 +2532,25 @@ const Game = (() => {
     const dx = p.x - zombie.x;
     const dy = p.y - zombie.y;
     const distance = Math.hypot(dx, dy) || 1;
-    const speed = kind === "arrow" ? 660 : 480;
+    const speed = kind === "arrow" ? 660 : kind === "iceball" ? ZOMBIE_ICE_PROJ_SPEED : kind === "fireball" ? ZOMBIE_FIRE_PROJ_SPEED : 480;
     const damage =
       kind === "arrow"
         ? ZOMBIE_ARCHER_DAMAGE
         : kind === "spear-throw"
           ? ZOMBIE_SPEAR_THROW_DAMAGE
-          : ZOMBIE_SPEAR_STAB_DAMAGE;
-    const range = kind === "arrow" ? ZOMBIE_ARCHER_RANGE : 300;
+          : kind === "iceball"
+            ? ZOMBIE_ICE_DAMAGE
+            : kind === "fireball"
+              ? ZOMBIE_FIRE_DAMAGE
+              : ZOMBIE_SPEAR_STAB_DAMAGE;
+    const range =
+      kind === "arrow"
+        ? ZOMBIE_ARCHER_RANGE
+        : kind === "iceball"
+          ? ZOMBIE_ICE_PROJ_RANGE
+          : kind === "fireball"
+            ? ZOMBIE_FIRE_PROJ_RANGE
+            : 300;
     state.zombieProjectiles.push({
       x: zombie.x,
       y: zombie.y,
@@ -1866,6 +2601,8 @@ const Game = (() => {
       state.shake = Math.max(state.shake, 0.65);
       showToast("Hạ gục trùm! +" + BOSS_MONEY + " tiền");
       DeepwoodAudio.win();
+      // Boss rơi ra hạt năng lượng vàng: nhặt sẽ được chọn 1 nâng cấp
+      spawnGem(zombie.x, zombie.y, { value: 0, kind: "gold" });
     }
 
     if (zombie.type === "exploder") {
@@ -1944,6 +2681,15 @@ const Game = (() => {
   }
 
   function collectGem(gem) {
+    // Hạt năng lượng vàng từ boss: nhặt được chọn 1 nâng cấp
+    if (gem.kind === "gold") {
+      state.gems = state.gems.filter((g) => g !== gem);
+      openSkillChoice();
+      DeepwoodAudio.pickup();
+      showToast("Nhặt hạt năng lượng — chọn 1 nâng cấp");
+      return;
+    }
+
     const base = Math.max(1, Math.round(Number(gem.value) || 1));
     const gain = base * (state.skills.wealth > 0 ? 3 : 1);
     const before = state.energy;
@@ -1978,37 +2724,10 @@ const Game = (() => {
     if (state.over || state.invuln > 0) return false;
 
     const base = Math.max(1, Number(amount) || 0);
-    let hpLoss = base;
+    let damage = base;
     let armorLoss = 0;
 
-    // Lá chắn năng lượng: giảm 20% sát thương khi dưới 30% máu
-    if (state.skills.energyShield > 0 && state.hp < state.maxHp * SHIELD_HP_THRESHOLD) {
-      hpLoss = Math.max(1, Math.ceil(base * 0.8));
-    }
-
-    // Khiên tăng cường: giảm 30% tất cả sát thương khi dưới 30% máu
-    if (state.skills.enhancedShield > 0 && state.hp < state.maxHp * SHIELD_HP_THRESHOLD) {
-      hpLoss = Math.max(1, Math.ceil(hpLoss * (1 - ENHANCED_SHIELD_DAMAGE_REDUCE)));
-    }
-
-    // Vũ trụ song song: khi dưới 30% máu, kích hoạt tự động (có hồi chiêu 3 phút)
-    if (
-      state.skills.parallelUniverse > 0 &&
-      !state.parallelUniverseActive &&
-      state.parallelUniverseTimer <= 0 &&
-      state.hp - hpLoss <= state.maxHp * 0.3
-    ) {
-      const healAmount = state.maxHp - state.hp + hpLoss;
-      state.parallelUniverseActive = true;
-      state.parallelUniverseTimer = PARALLEL_UNIVERSE_DURATION;
-      state.hp = state.maxHp; // Hồi đầy máu ngay lập tức
-      updateHealthHud();
-      floatText(state.player.x, state.player.y - 40, "VŨ TRỰ SONG SONG!", "180, 100, 255");
-      showToast("Vũ trụ song song kích hoạt! +" + Math.round(healAmount) + " máu, x5 sát thương trong 10 giây");
-      DeepwoodAudio.win();
-      state.shake = Math.max(state.shake, 0.6);
-    }
-
+    // Zombie khiên chắn phía trước: giảm sát thương trước khi tính các lớp giáp/khiên
     if (
       options.shieldZombie &&
       options.shieldZombie.type === "shield" &&
@@ -2026,12 +2745,18 @@ const Game = (() => {
         )
       );
       if (diff < Math.PI / 2) {
-        base = Math.max(1, Math.ceil(base * (1 - ZOMBIE_SHIELD_FRONT_REDUCE)));
+        damage = Math.max(1, Math.ceil(damage * (1 - ZOMBIE_SHIELD_FRONT_REDUCE)));
       }
     }
 
-    if (!options.ignoreArmor && state.maxArmor > 0 && state.armor > 0) {
-      hpLoss = Math.max(1, Math.ceil(base * (1 - ARMOR_MITIGATION)));
+    // Giáp của Chiến binh: chỉ giảm đòn khi còn đủ giáp để trừ (>= 10).
+    // Dưới mức đó nhận toàn bộ sát thương, không trừ giáp.
+    if (
+      !options.ignoreArmor &&
+      state.maxArmor > 0 &&
+      state.armor >= ARMOR_PER_HIT
+    ) {
+      damage = Math.max(1, Math.ceil(damage * (1 - ARMOR_MITIGATION)));
       armorLoss = Math.min(ARMOR_PER_HIT, state.armor);
       state.armor = Math.max(0, state.armor - armorLoss);
       state.armorDisplay = -1;
@@ -2039,9 +2764,37 @@ const Game = (() => {
       if (state.armor <= 0) {
         floatText(state.player.x, state.player.y - 34, "Giáp cạn", "255, 118, 104");
       }
-    } else {
-      // Không có giáp hoặc hết giáp: nhận full damage, không trừ giáp
-      hpLoss = base;
+    }
+
+    // Khiên chỉ kích hoạt khi máu hiện tại dưới 50%: giảm 30% mọi loại sát thương.
+    const hpRatio = state.hp / state.maxHp;
+    if ((state.skills.energyShield > 0 || state.skills.enhancedShield > 0) && hpRatio < SHIELD_HP_THRESHOLD) {
+      damage *= 1 - ENHANCED_SHIELD_DAMAGE_REDUCE;
+    }
+
+    // Sức đề kháng: giảm phần trăm sát thương nhận được
+    if (state.skills.resistance > 0 && state.resistanceBonus > 0) {
+      damage *= 1 - state.resistanceBonus;
+    }
+
+    const hpLoss = Math.max(1, Math.ceil(damage));
+
+    // Vũ trụ song song: khi đòn này sẽ đưa máu xuống dưới 30%, kích hoạt tự động
+    if (
+      state.skills.parallelUniverse > 0 &&
+      !state.parallelUniverseActive &&
+      state.parallelUniverseTimer <= 0 &&
+      state.hp - hpLoss <= state.maxHp * 0.3
+    ) {
+      const healAmount = state.maxHp - state.hp + hpLoss;
+      state.parallelUniverseActive = true;
+      state.parallelUniverseTimer = PARALLEL_UNIVERSE_DURATION + state.extendedDurationBonus;
+      state.hp = state.maxHp; // Hồi đầy máu ngay lập tức
+      updateHealthHud();
+      floatText(state.player.x, state.player.y - 40, "VŨ TRỤ SONG SONG!", "180, 100, 255");
+      showToast("Map mộng mơ kích hoạt! +" + Math.round(healAmount) + " máu, x5 sát thương trong 10 giây");
+      DeepwoodAudio.win();
+      state.shake = Math.max(state.shake, 0.6);
     }
 
     state.hp = Math.max(0, state.hp - hpLoss);
@@ -2115,6 +2868,7 @@ const Game = (() => {
     state.paused = false;
     state.keys.clear();
     state.pointer.active = false;
+    resetJoystick();
     state.hurtFlash = 0;
 
     if (els.gameoverKills) els.gameoverKills.textContent = String(state.kills);
@@ -2134,6 +2888,7 @@ const Game = (() => {
     state.paused = false;
     state.keys.clear();
     state.pointer.active = false;
+    resetJoystick();
 
     if (els.victoryKills) els.victoryKills.textContent = String(state.kills);
     if (els.victoryTime) els.victoryTime.textContent = formatTime(state.elapsed);
@@ -2162,7 +2917,15 @@ const Game = (() => {
     if (keys.has("w") || keys.has("arrowup")) dy -= 1;
     if (keys.has("s") || keys.has("arrowdown")) dy += 1;
 
-    if (state.pointer.active) {
+    if (state.joystick.active) {
+      const jx = Number(state.joystick.x) || 0;
+      const jy = Number(state.joystick.y) || 0;
+      const joyLength = Math.hypot(jx, jy);
+      if (joyLength > 0.05) {
+        dx = jx;
+        dy = jy;
+      }
+    } else if (state.pointer.active) {
       const targetX = state.camera.x + state.pointer.x;
       const targetY = state.camera.y + state.pointer.y;
       const px = targetX - p.x;
@@ -2190,6 +2953,7 @@ const Game = (() => {
     p.walk += dt * (moving ? 9 : 1.6);
 
     const target = nearestZombie(DART_RANGE);
+    state.nearestTarget = target;
     let faceTarget = null;
     if (moving) faceTarget = Math.atan2(p.vy, p.vx);
     else if (target) faceTarget = Math.atan2(target.y - p.y, target.x - p.x);
@@ -2237,21 +3001,25 @@ const Game = (() => {
 
       const dx = p.x - zombie.x;
       const dy = p.y - zombie.y;
-      const distance = Math.hypot(dx, dy) || 1;
+      const distance = Math.sqrt(dx * dx + dy * dy) || 1;
       zombie.face = Math.atan2(dy, dx);
       if (zombie.type === "shield") zombie.shieldDir = zombie.face;
 
       let sepX = 0;
       let sepY = 0;
       let sepChecked = 0;
-      for (const other of state.zombies) {
-        if (sepChecked >= 20) break;
+      const sepRangeSq = zombie.radius * zombie.radius * 5.29;
+      const zombieCount = state.zombies.length;
+      for (let si = 0; si < zombieCount; si += 1) {
+        if (sepChecked >= 12) break;
+        const other = state.zombies[si];
         if (other === zombie || other.dead) continue;
         sepChecked += 1;
         const ox = zombie.x - other.x;
         const oy = zombie.y - other.y;
-        const od = Math.hypot(ox, oy);
-        if (od > 0 && od < zombie.radius * 2.3) {
+        const od2 = ox * ox + oy * oy;
+        if (od2 > 0.0001 && od2 < sepRangeSq) {
+          const od = Math.sqrt(od2);
           sepX += ox / od;
           sepY += oy / od;
         }
@@ -2263,10 +3031,24 @@ const Game = (() => {
       if (zombie.burrowState !== "burrowed") {
         let tx = dx / distance + sepX * 1.1;
         let ty = dy / distance + sepY * 1.1;
-        const moveLength = Math.hypot(tx, ty) || 1;
+        const moveLength = Math.sqrt(tx * tx + ty * ty) || 1;
         const approach = distance > 760 ? 2.4 : distance > 560 ? 1.4 : 1;
         zombie.x += (tx / moveLength) * finalSpeed * approach * dt;
         zombie.y += (ty / moveLength) * finalSpeed * approach * dt;
+      }
+
+      if (zombie.type === "ice") {
+        zombie.iceZoneTimer = Math.max(0, (zombie.iceZoneTimer || 0) - dt);
+        if (zombie.iceZoneTimer <= 0 && state.iceZones.length < 40) {
+          zombie.iceZoneTimer = ZOMBIE_ICE_SPAWN_ZONE_INTERVAL;
+          state.iceZones.push({
+            x: zombie.x,
+            y: zombie.y,
+            radius: ZOMBIE_ICE_ZONE_RADIUS,
+            life: 0,
+            ttl: ZOMBIE_ICE_ZONE_TTL,
+          });
+        }
       }
 
       if (distance < 30) {
@@ -2308,6 +3090,18 @@ const Game = (() => {
             p.x += (dx / distance) * 14;
             p.y += (dy / distance) * 14;
           }
+        }
+      } else if (zombie.type === "ice") {
+        if (distance <= ZOMBIE_ICE_PROJ_RANGE && zombie.attackCooldown <= 0) {
+          zombie.attackCooldown = 1.8;
+          spawnZombieProjectile(zombie, "iceball");
+          DeepwoodAudio.hit();
+        }
+      } else if (zombie.type === "fire") {
+        if (distance <= ZOMBIE_FIRE_PROJ_RANGE && zombie.attackCooldown <= 0) {
+          zombie.attackCooldown = 2.2;
+          spawnZombieProjectile(zombie, "fireball");
+          DeepwoodAudio.hit();
         }
       } else if (zombie.type === "crawler") {
         if (distance <= ZOMBIE_CRAWLER_LEAP_RANGE && zombie.leapCooldown <= 0 && state.invuln <= 0) {
@@ -2386,6 +3180,35 @@ const Game = (() => {
         if (zombie.howlActive > 0) {
           zombie.howlActive = Math.max(0, zombie.howlActive - dt);
         }
+      } else if (zombie.type === "boss") {
+        // Trùm triệu hồi zombie định kỳ xung quanh mình
+        state.bossSummonTimer = Math.max(0, state.bossSummonTimer - dt);
+        if (state.bossSummonTimer <= 0) {
+          state.bossSummonTimer = ZOMBIE_BOSS_SUMMON_INTERVAL;
+          for (let s = 0; s < ZOMBIE_BOSS_SUMMON_COUNT; s += 1) {
+            const angle = rand(0, TAU);
+            const r = rand(80, 180);
+            const sz = spawnZombie(false);
+            if (sz) {
+              sz.x = zombie.x + Math.cos(angle) * r;
+              sz.y = zombie.y + Math.sin(angle) * r;
+              sz.spawn = 0;
+            }
+          }
+          DeepwoodAudio.hit();
+        }
+      } else if (zombie.type === "exploder") {
+        // Exploder chạy lại gần người chơi thì nổ luôn, gây 10 sát thương
+        if (distance <= 40 && state.invuln <= 0) {
+          zombie.dead = true;
+          state.kills += 1;
+          updateStatsHud();
+          damagePlayer(ZOMBIE_EXPLODER_DAMAGE, { playerX: p.x, playerY: p.y });
+          state.shake = Math.max(state.shake, 0.5);
+          DeepwoodAudio.slain();
+          burst(zombie.x, zombie.y, 20, "255, 146, 70", 40, 250);
+          burst(zombie.x, zombie.y, 10, "255, 232, 160", 20, 110);
+        }
       } else if (distance < 40 && zombie.attackCooldown <= 0 && state.invuln <= 0) {
         zombie.attackCooldown = 1.05;
         zombie.attackAnim = 1;
@@ -2432,7 +3255,7 @@ const Game = (() => {
       state.doctorTimer -= DOCTOR_REGEN_INTERVAL;
       if (state.hp <= 0 || state.hp >= state.maxHp) continue;
 
-      const safe = state.damageTimer >= DOCTOR_REGEN_INTERVAL;
+      const safe = state.damageTimer >= DOCTOR_SAFE_AFTER;
       const heal = Math.min(
         safe ? DOCTOR_REGEN_SAFE : DOCTOR_REGEN_HURT,
         state.maxHp - state.hp
@@ -2498,19 +3321,34 @@ const Game = (() => {
 
     const cfg = SAW_LEVELS[Math.min(level, SAW_LEVELS.length) - 1];
     const p = state.player;
-    state.sawAngle = (state.sawAngle + cfg.speed * sawSpeedMult * dt) % TAU;
+
+    // Quay lưỡi cưa chỉ dùng các trường của SAW_LEVELS (không có multiplier bị thiếu).
+    state.sawAngle = (state.sawAngle + cfg.speed * dt) % TAU;
+    if (!isFinite(state.sawAngle)) state.sawAngle = 0;
+
+    const hitThisFrame = new Set();
 
     for (let i = 0; i < cfg.count; i += 1) {
       const angle = state.sawAngle + (i / cfg.count) * TAU;
-      const sx = p.x + Math.cos(angle) * cfg.radius * sawSizeMult;
-      const sy = p.y + Math.sin(angle) * cfg.radius * sawSizeMult;
+      const sx = p.x + Math.cos(angle) * cfg.radius;
+      const sy = p.y + Math.sin(angle) * cfg.radius;
 
       for (const zombie of state.zombies) {
         if (zombie.dead || zombie.sawCooldown > 0) continue;
-        if (dist(sx, sy, zombie.x, zombie.y) > cfg.size * sawSizeMult + zombie.radius + 5) continue;
+        if (hitThisFrame.has(zombie)) continue;
+        const reach = (cfg.size || 0) + (zombie.radius || 12) + 5;
+        if (
+          !isFinite(sx) ||
+          !isFinite(sy) ||
+          !isFinite(zombie.x) ||
+          !isFinite(zombie.y) ||
+          distSq(sx, sy, zombie.x, zombie.y) > reach * reach
+        )
+          continue;
 
         damageZombie(zombie, SAW_DAMAGE, { quiet: true });
         zombie.sawCooldown = 0.42;
+        hitThisFrame.add(zombie);
 
         const dx = zombie.x - p.x;
         const dy = zombie.y - p.y;
@@ -2525,6 +3363,49 @@ const Game = (() => {
     }
   }
 
+  function updateFireOrbs(dt) {
+    const level = state.skills.fireOrb;
+    if (!level) return;
+
+    const cfg = FIRE_ORB_LEVELS[Math.min(level, FIRE_ORB_LEVELS.length) - 1];
+    const p = state.player;
+
+    state.fireOrbAngle = (state.fireOrbAngle + cfg.speed * dt) % TAU;
+    if (!isFinite(state.fireOrbAngle)) state.fireOrbAngle = 0;
+
+    const hitThisFrame = new Set();
+
+    for (let i = 0; i < cfg.count; i += 1) {
+      const angle = state.fireOrbAngle + (i / cfg.count) * TAU;
+      const fx = p.x + Math.cos(angle) * cfg.radius;
+      const fy = p.y + Math.sin(angle) * cfg.radius;
+
+      for (const zombie of state.zombies) {
+        if (zombie.dead) continue;
+        if (hitThisFrame.has(zombie)) continue;
+        const reach = cfg.size + (zombie.radius || 12) + 4;
+        if (
+          !isFinite(fx) ||
+          !isFinite(fy) ||
+          !isFinite(zombie.x) ||
+          !isFinite(zombie.y) ||
+          distSq(fx, fy, zombie.x, zombie.y) > reach * reach
+        )
+          continue;
+
+        damageZombie(zombie, cfg.damage, { quiet: true, tone: "255, 120, 60", count: 4, speed: 50 });
+        hitThisFrame.add(zombie);
+
+        const burnCfg = BURN_LEVELS[Math.min(state.skills.burn || 0, BURN_LEVELS.length - 1)];
+        if (state.skills.burn > 0 && !zombie.dead) {
+          applyBurn(zombie, burnCfg.dps, burnCfg.duration);
+        }
+
+        break;
+      }
+    }
+  }
+
   function updateSlashes(dt) {
     for (let i = state.slashes.length - 1; i >= 0; i -= 1) {
       const slash = state.slashes[i];
@@ -2534,6 +3415,13 @@ const Game = (() => {
   }
 
   function updateBurnEffects(dt) {
+    const camX = state.camera.x;
+    const camY = state.camera.y;
+    const margin = 80;
+    const right = camX + state.w + margin;
+    const bottom = camY + state.h + margin;
+    const crowded = state.zombies.length > 28;
+
     for (let i = state.zombies.length - 1; i >= 0; i -= 1) {
       const z = state.zombies[i];
       if (z.dead || z.burnTimer <= 0) continue;
@@ -2542,8 +3430,9 @@ const Game = (() => {
       z.burnDamageTimer = (z.burnDamageTimer || 0) + dt;
       z.burnFxTimer = (z.burnFxTimer || 0) - dt;
 
-      if (z.burnFxTimer <= 0 && state.particles.length < 520) {
-        z.burnFxTimer = 0.12 + Math.random() * 0.08;
+      const onScreen = z.x > camX - margin && z.x < right && z.y > camY - margin && z.y < bottom;
+      if (onScreen && z.burnFxTimer <= 0 && state.particles.length < (crowded ? 260 : 360)) {
+        z.burnFxTimer = crowded ? 0.2 + Math.random() * 0.12 : 0.14 + Math.random() * 0.1;
         burst(
           z.x + rand(-7, 7) * (z.radius / 17),
           z.y - rand(2, 14) * (z.radius / 17),
@@ -2561,6 +3450,39 @@ const Game = (() => {
         if (!z.dead && state.texts.length < 90) {
           floatText(z.x, z.y - z.radius - 8, `-${dmg}`, "255, 156, 64");
         }
+      }
+    }
+  }
+
+  function updateIceZones(dt) {
+    for (let i = state.iceZones.length - 1; i >= 0; i -= 1) {
+      const zone = state.iceZones[i];
+      zone.life += dt;
+      if (zone.life >= zone.ttl) {
+        state.iceZones.splice(i, 1);
+        continue;
+      }
+      const p = state.player;
+      if (dist(p.x, p.y, zone.x, zone.y) <= zone.radius) {
+        state.playerSlowTimer = ZOMBIE_ICE_ZONE_SLOW_TIME;
+        state.playerSlowMult = 1 - ZOMBIE_ICE_ZONE_SLOW;
+      }
+    }
+  }
+
+  function updatePlayerBurn(dt) {
+    if (state.playerBurnTimer > 0) {
+      state.playerBurnTimer = Math.max(0, state.playerBurnTimer - dt);
+      state.playerBurnTimerAcc = (state.playerBurnTimerAcc || 0) + dt;
+      while (state.playerBurnTimerAcc >= 1 && state.playerBurnTimer > 0) {
+        state.playerBurnTimerAcc -= 1;
+        if (state.playerBurnDps > 0 && state.invuln <= 0) {
+          damagePlayer(state.playerBurnDps, { ignoreArmor: true, poison: true });
+        }
+      }
+      if (state.playerBurnTimer <= 0) {
+        state.playerBurnDps = 0;
+        state.playerBurnTimerAcc = 0;
       }
     }
   }
@@ -2648,6 +3570,14 @@ const Game = (() => {
           p.x -= (pr.vx / spd) * 10;
           p.y -= (pr.vy / spd) * 10;
         }
+        // Hiệu ứng đặc biệt theo loại đạn
+        if (pr.kind === "iceball" && state.playerSlowTimer <= 0) {
+          state.playerSlowTimer = ZOMBIE_ICE_ZONE_SLOW_TIME;
+          state.playerSlowMult = 1 - ZOMBIE_ICE_ZONE_SLOW;
+        } else if (pr.kind === "fireball") {
+          state.playerBurnTimer = ZOMBIE_FIRE_ZONE_DURATION;
+          state.playerBurnDps = ZOMBIE_FIRE_ZONE_DPS;
+        }
         state.zombieProjectiles.splice(i, 1);
         continue;
       }
@@ -2671,6 +3601,9 @@ const Game = (() => {
 
   function updateTornado(dt) {
     if (state.skills.tornado <= 0) return;
+
+    state.tornadoFx = Math.max(0, state.tornadoFx - dt);
+
     state.tornadoTimer = Math.max(0, state.tornadoTimer - dt);
     if (state.tornadoTimer > 0) return;
     state.tornadoTimer = TORNADO_INTERVAL;
@@ -2688,8 +3621,11 @@ const Game = (() => {
       zombie.y += (dy / d) * 60;
       hitAny = true;
     }
-    if (hitAny && state.particles.length < 520) {
-      burst(p.x, p.y, 14, "200, 220, 255", 30, 140);
+
+    // Hiệu ứng lốc xoáy luôn xuất hiện khi kích hoạt (dù có trúng zombie hay không).
+    state.tornadoFx = TORNADO_FX_TTL;
+    if (state.particles.length < 520) {
+      burst(p.x, p.y, 22, "200, 220, 255", 40, 180);
       DeepwoodAudio.sawHit();
     }
   }
@@ -2728,12 +3664,14 @@ const Game = (() => {
       if (!mine.armed) {
         mine.armTime = Math.max(0, mine.armTime - dt);
         if (mine.armTime <= 0) mine.armed = true;
+        continue;
       }
 
+      const hitRadius = mine.radius;
       for (const zombie of state.zombies) {
         if (zombie.dead) continue;
-        if (!mine.armed) continue;
-        if (dist(zombie.x, zombie.y, mine.x, mine.y) <= mine.radius + zombie.radius) {
+        const reach = hitRadius + zombie.radius;
+        if (distSq(zombie.x, zombie.y, mine.x, mine.y) <= reach * reach) {
           damageZombie(zombie, mine.damage, {
             quiet: true,
             tone: "255, 146, 70",
@@ -2756,6 +3694,142 @@ const Game = (() => {
           break;
         }
       }
+    }
+  }
+
+  // Dùng chung option để không tạo object mới cho từng zombie mỗi tick hố đen.
+  const BLACK_HOLE_DAMAGE_OPTIONS = {
+    quiet: true,
+    noBurn: true,
+    tone: "190, 120, 255",
+    count: 3,
+    speed: 55,
+  };
+
+  function updateBlackHoles(dt) {
+    const level = state.skills.blackHole || 0;
+
+    if (level > 0) {
+      const cfg = BLACK_HOLE_LEVELS[Math.min(level, BLACK_HOLE_LEVELS.length) - 1];
+      state.blackHoleTimer = Math.max(0, state.blackHoleTimer - dt);
+
+      if (state.blackHoleTimer <= 0) {
+        const alive = state.zombies.filter((zombie) => !zombie.dead);
+        if (alive.length === 0) {
+          state.blackHoleTimer = 1;
+        } else {
+          state.blackHoleTimer = cfg.cooldown;
+
+          // Chọn ngẫu nhiên các zombie khác nhau để đặt hố đen dưới chân
+          const pool = alive.slice();
+          for (let i = pool.length - 1; i > 0; i -= 1) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const tmp = pool[i];
+            pool[i] = pool[j];
+            pool[j] = tmp;
+          }
+
+          const count = Math.min(cfg.count, pool.length);
+          for (let i = 0; i < count; i += 1) {
+            const target = pool[i];
+            state.blackHoles.push({
+              x: target.x,
+              y: target.y + (target.radius || 12) * 0.2,
+              life: 0,
+              ttl: BLACK_HOLE_DURATION,
+              radius: BLACK_HOLE_RADIUS,
+              dps: cfg.dps,
+              tick: 0,
+              seed: rand(0, TAU),
+            });
+          }
+
+          if (state.blackHoles.length > 12) {
+            state.blackHoles.splice(0, state.blackHoles.length - 12);
+          }
+          DeepwoodAudio.pickup();
+        }
+      }
+    } else {
+      state.blackHoleTimer = 0;
+    }
+
+    for (let i = state.blackHoles.length - 1; i >= 0; i -= 1) {
+      const hole = state.blackHoles[i];
+      hole.life += dt;
+
+      if (hole.life >= hole.ttl) {
+        state.blackHoles.splice(i, 1);
+        continue;
+      }
+
+      // Hút zombie về tâm hố đen (so sánh bình phương, chỉ sqrt khi thật sự trong tầm)
+      const holeRadius = hole.radius;
+      for (const zombie of state.zombies) {
+        if (zombie.dead) continue;
+        const dx = hole.x - zombie.x;
+        const dy = hole.y - zombie.y;
+        const reach = holeRadius + (zombie.radius || 12) * 0.5;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > reach * reach || d2 <= 36) continue;
+
+        const d = Math.sqrt(d2);
+        const isBoss = zombie.isBoss || zombie.type === "boss";
+        const resist = isBoss ? 0.3 : 1;
+        const step = Math.min(BLACK_HOLE_PULL * resist * dt, d);
+        zombie.x += (dx / d) * step;
+        zombie.y += (dy / d) * step;
+      }
+
+      // Hạt xoáy vào trong hố đen — chỉ tạo khi hố đen nằm trong khung hình
+      if (inView(hole.x, hole.y, holeRadius) && Math.random() < 0.24 && state.particles.length < 400) {
+        const a = (hole.seed || 0) + hole.life * 3 + Math.random() * TAU;
+        const r = 10 + Math.random() * (holeRadius * 0.5);
+        state.particles.push({
+          x: hole.x + Math.cos(a) * r,
+          y: hole.y + Math.sin(a) * holeRadius * 0.5,
+          vx: -Math.cos(a) * 150,
+          vy: -Math.sin(a) * 100,
+          life: 0,
+          ttl: 0.25 + Math.random() * 0.25,
+          size: 1 + Math.random() * 1.5,
+          tone: "200, 160, 255",
+        });
+      }
+
+      // Sát thương mỗi giây (chỉ hiện tối đa 6 số sát thương mỗi hố đen/tick để đỡ rối mắt)
+      hole.tick -= dt;
+      let guard = 0;
+      while (hole.tick <= 0 && guard < 2) {
+        hole.tick += 1;
+        guard += 1;
+
+        const dmg = Math.max(1, Math.round(hole.dps));
+        let shown = 0;
+        for (const zombie of state.zombies) {
+          if (zombie.dead) continue;
+          const zr = zombie.radius || 12;
+          const reach = holeRadius + zr * 0.5;
+          const dx = zombie.x - hole.x;
+          const dy = zombie.y - hole.y;
+          if (dx * dx + dy * dy > reach * reach) continue;
+
+          damageZombie(zombie, dmg, BLACK_HOLE_DAMAGE_OPTIONS);
+          if (!zombie.dead && shown < 6) {
+            floatText(zombie.x, zombie.y - zr - 6, `-${dmg}`, "196, 132, 255");
+            shown += 1;
+          }
+        }
+      }
+      if (hole.tick < 0) hole.tick = 1;
+    }
+  }
+
+  function updateChainBolts(dt) {
+    for (let i = state.chainBolts.length - 1; i >= 0; i -= 1) {
+      const bolt = state.chainBolts[i];
+      bolt.life += dt;
+      if (bolt.life >= bolt.ttl) state.chainBolts.splice(i, 1);
     }
   }
 
@@ -2828,15 +3902,43 @@ const Game = (() => {
           }
         }
 
-        // Điện lan truyền: 15% cơ hội chập chập điện sang 3 zombie gần nhất
-        if (state.skills.chainLightning > 0 && !zombie.dead && Math.random() < 0.15) {
-          const others = state.zombies
-            .filter((z) => !z.dead && z.id !== zombie.id)
-            .sort((a, b) => dist(a.x, a.y, zombie.x, zombie.y) - dist(b.x, b.y, zombie.x, zombie.y))
-            .slice(0, 3);
+        // Điện lan truyền: 35% cơ hội phóng điện sang 3 zombie gần nhất
+        if (state.skills.chainLightning > 0 && !zombie.dead && Math.random() < 0.35) {
+          // Chỉ giữ 3 mục tiêu gần nhất, tránh filter + sort toàn bộ mảng mỗi lần trúng đòn.
+          const nearest = [];
+          for (const other of state.zombies) {
+            if (other.dead || other.id === zombie.id) continue;
+            const d2 = distSq(other.x, other.y, zombie.x, zombie.y);
+            if (nearest.length < 3) {
+              nearest.push({ zombie: other, d2 });
+              nearest.sort((a, b) => a.d2 - b.d2);
+            } else if (d2 < nearest[2].d2) {
+              nearest[2] = { zombie: other, d2 };
+              nearest.sort((a, b) => a.d2 - b.d2);
+            }
+          }
+          const others = nearest.map((entry) => entry.zombie);
+
           for (const target of others) {
-            damageZombie(target, hitDamage * 0.7, { quiet: true, tone: "160, 220, 255", count: 5, speed: 70 });
-            burst(target.x, target.y, 5, "160, 220, 255", 12, 50);
+            // Dây điện vàng nối từ zombie trúng đòn sang các mục tiêu bị giật
+            state.chainBolts.push({
+              x1: zombie.x,
+              y1: zombie.y,
+              x2: target.x,
+              y2: target.y,
+              life: 0,
+              ttl: 0.45,
+              seed: rand(0, 1000),
+            });
+            damageZombie(target, hitDamage * 0.7, { quiet: true, tone: "255, 224, 96", count: 5, speed: 70 });
+            burst(target.x, target.y, 6, "255, 224, 96", 14, 62);
+          }
+
+          if (others.length > 0) {
+            burst(zombie.x, zombie.y, 8, "255, 240, 140", 18, 80);
+            if (state.chainBolts.length > 60) {
+              state.chainBolts.splice(0, state.chainBolts.length - 60);
+            }
           }
         }
 
@@ -2862,6 +3964,9 @@ const Game = (() => {
   function updateGems(dt) {
     const p = state.player;
     const magnetRadius = MAGNET_BASE + state.skills.magnet * 45;
+    const magnetDrag = Math.pow(0.02, dt);
+    const driftDrag = Math.pow(0.16, dt);
+    const pickupSq = GEM_PICKUP * GEM_PICKUP;
 
     for (let i = state.gems.length - 1; i >= 0; i -= 1) {
       const gem = state.gems[i];
@@ -2870,22 +3975,22 @@ const Game = (() => {
 
       const dx = p.x - gem.x;
       const dy = p.y - gem.y;
-      const distance = Math.hypot(dx, dy) || 1;
+      const distance = Math.sqrt(dx * dx + dy * dy) || 1;
 
       if (distance < magnetRadius) {
         const pull = 260 + (magnetRadius - distance) * 4;
         gem.x += (dx / distance) * pull * dt;
         gem.y += (dy / distance) * pull * dt;
-        gem.vx *= Math.pow(0.02, dt);
-        gem.vy *= Math.pow(0.02, dt);
+        gem.vx *= magnetDrag;
+        gem.vy *= magnetDrag;
       } else {
         gem.x += gem.vx * dt;
         gem.y += gem.vy * dt;
-        gem.vx *= Math.pow(0.16, dt);
-        gem.vy *= Math.pow(0.16, dt);
+        gem.vx *= driftDrag;
+        gem.vy *= driftDrag;
       }
 
-      if (Math.hypot(p.x - gem.x, p.y - gem.y) < GEM_PICKUP) {
+      if (distSq(p.x, p.y, gem.x, gem.y) < pickupSq) {
         collectGem(gem);
         state.gems.splice(i, 1);
       }
@@ -2893,6 +3998,7 @@ const Game = (() => {
   }
 
   function updateParticles(dt) {
+    const drag = Math.pow(0.24, dt);
     for (let i = state.particles.length - 1; i >= 0; i -= 1) {
       const particle = state.particles[i];
       particle.life += dt;
@@ -2902,8 +4008,8 @@ const Game = (() => {
       }
       particle.x += particle.vx * dt;
       particle.y += particle.vy * dt;
-      particle.vx *= Math.pow(0.24, dt);
-      particle.vy = particle.vy * Math.pow(0.24, dt) - 14 * dt;
+      particle.vx *= drag;
+      particle.vy = particle.vy * drag - 14 * dt;
     }
   }
 
@@ -2991,7 +4097,7 @@ const Game = (() => {
     if (state.waveSpawned >= state.waveQuota && state.zombies.length === 0) {
       state.waveState = "clear";
       state.waveTimer = 1.8;
-      addMoney(Math.floor(500 + Math.random() * 501));
+      addMoney(Math.floor(100 + Math.random() * 151));
       showToast(`Đợt ${state.wave} hoàn thành`);
       DeepwoodAudio.pickup();
     }
@@ -3090,6 +4196,90 @@ const Game = (() => {
     }
   }
 
+  function updateSkyMissiles(dt) {
+    const level = state.skills.skyMissile;
+    if (!level) return;
+
+    const cfg = SKY_MISSILE_LEVELS[Math.min(level, SKY_MISSILE_LEVELS.length) - 1];
+    const p = state.player;
+
+    state.skyMissileTimer = Math.max(0, state.skyMissileTimer - dt);
+    if (state.skyMissileTimer <= 0) {
+      state.skyMissileTimer = cfg.cooldown;
+
+      for (let i = 0; i < cfg.count; i += 1) {
+        const alive = state.zombies.filter((zombie) => !zombie.dead);
+        let tx, ty;
+        if (alive.length > 0) {
+          const target = alive[Math.floor(Math.random() * alive.length)];
+          tx = target.x + rand(-40, 40);
+          ty = target.y + rand(-30, 30);
+        } else {
+          const angle = rand(0, TAU);
+          const radius = rand(150, 350);
+          tx = p.x + Math.cos(angle) * radius;
+          ty = p.y + Math.sin(angle) * radius;
+        }
+
+        state.skyMissiles.push({
+          x: tx,
+          y: -150,
+          tx,
+          ty,
+          damage: cfg.damage,
+          radius: 40,
+          speed: 420 + Math.random() * 80,
+          impacted: false,
+          impactLife: 0,
+        });
+      }
+      DeepwoodAudio.firebomb();
+    }
+
+    for (let i = state.skyMissiles.length - 1; i >= 0; i -= 1) {
+      const m = state.skyMissiles[i];
+
+      if (!m.impacted) {
+        const dy = m.ty - m.y;
+        const distToTarget = Math.abs(dy);
+        const step = m.speed * dt;
+        m.y += step;
+
+        if (m.y >= m.ty) {
+          m.y = m.ty;
+          m.impacted = true;
+          m.impactLife = 0;
+          state.blasts.push({
+            x: m.tx,
+            y: m.ty,
+            life: 0,
+            ttl: 0.4,
+            radius: m.radius,
+            tone: "255, 120, 60",
+          });
+          burst(m.tx, m.ty, 20, "255, 140, 60", 30, 160);
+          burst(m.tx, m.ty, 10, "255, 232, 150", 15, 120);
+          state.shake = Math.max(state.shake, 0.35);
+          DeepwoodAudio.fireBurst();
+
+          for (const zombie of state.zombies) {
+            if (zombie.dead) continue;
+            if (dist(zombie.x, zombie.y, m.tx, m.ty) <= m.radius + zombie.radius) {
+              damageZombie(zombie, m.damage, {
+                quiet: true,
+                noBurn: true,
+                tone: "255, 176, 90",
+              });
+            }
+          }
+        }
+      } else {
+        m.impactLife += dt;
+        if (m.impactLife >= 0.5) state.skyMissiles.splice(i, 1);
+      }
+    }
+  }
+
   function updateHealing(dt) {
     if (state.skills.healing <= 0) {
       state.healingTimer = 0;
@@ -3141,6 +4331,7 @@ const Game = (() => {
     updateFirebombs(dt);
     updateFireZones(dt);
     updateSaws(dt);
+    updateFireOrbs(dt);
     updateArmorRegen(dt);
     updateDoctorRegen(dt);
     updateHealing(dt);
@@ -3149,6 +4340,8 @@ const Game = (() => {
     updateLightning(dt);
     updateMeteors(dt);
     updateBlasts(dt);
+    updateIceZones(dt);
+    updatePlayerBurn(dt);
     updateTornado(dt);
     updateZombieProjectiles(dt);
 
@@ -3161,8 +4354,12 @@ const Game = (() => {
       }
     }
 
+    updateSkyMissiles(dt);
+
     updateMines(dt);
     updateMineCollisions(dt);
+    updateBlackHoles(dt);
+    updateChainBolts(dt);
 
     // Vũ trụ song song: đếm ngược thời gian tồn tại
     if (state.parallelUniverseActive) {
@@ -3355,18 +4552,31 @@ const Game = (() => {
     focusGame();
   }
 
+  let _lastErrorTime = 0;
+  function _logErrorOncePer(e, minInterval = 2) {
+    const now = Date.now();
+    if (now - _lastErrorTime < minInterval * 1000) return;
+    _lastErrorTime = now;
+    console.error("Deepwood loop error:", e);
+  }
+
   function loop(now) {
     if (!state.active) return;
     const t = now / 1000;
     const dt = state.last ? Math.min(0.05, Math.max(0.001, t - state.last)) : 0.016;
     state.last = t;
 
-    if (!state.paused && !state.choosing && !state.over && !state.victory) {
-      update(dt);
+    try {
+      if (!state.paused && !state.choosing && !state.over && !state.victory) {
+        update(dt);
+      }
+      render(t);
+    } catch (e) {
+      _logErrorOncePer(e);
+    } finally {
+      // Luân tiếp khung hình ngay cả khi có lỗi để game không bị đơ vĩnh viễn.
+      state.raf = window.requestAnimationFrame(loop);
     }
-    render(t);
-
-    state.raf = window.requestAnimationFrame(loop);
   }
 
   const REROLL_COST = 10;
@@ -3440,8 +4650,8 @@ const Game = (() => {
   }
 
   function drawReticle(t) {
-    const target = nearestZombie(DART_RANGE);
-    if (!target) return;
+    const target = state.nearestTarget;
+    if (!target || target.dead) return;
 
     ctx.save();
     ctx.translate(target.x, target.y);
@@ -3462,26 +4672,167 @@ const Game = (() => {
   }
 
   function drawParticles() {
+    const camX = state.camera.x;
+    const camY = state.camera.y;
+    const left = camX - 80;
+    const right = camX + state.w + 80;
+    const top = camY - 80;
+    const bottom = camY + state.h + 80;
+
     for (const particle of state.particles) {
       const alpha = Math.max(0, 1 - particle.life / particle.ttl);
-      ctx.fillStyle = `rgba(${particle.tone}, ${alpha * 0.9})`;
-      ctx.beginPath();
-      ctx.arc(particle.x, particle.y, particle.size * (0.4 + alpha), 0, TAU);
-      ctx.fill();
+      if (
+        particle.x < left ||
+        particle.x > right ||
+        particle.y < top ||
+        particle.y > bottom
+      ) {
+        continue;
+      }
+      const sprite = getToneSprite(particle.tone);
+      const r = particle.size * (0.8 + alpha * 1.2);
+      ctx.globalAlpha = alpha * 0.9;
+      ctx.drawImage(sprite, particle.x - r, particle.y - r, r * 2, r * 2);
     }
+    ctx.globalAlpha = 1;
   }
 
   function drawTexts() {
+    const camX = state.camera.x;
+    const camY = state.camera.y;
+    const left = camX - 60;
+    const right = camX + state.w + 60;
+    const top = camY - 60;
+    const bottom = camY + state.h + 60;
+
     ctx.save();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "600 13px Inter, system-ui, sans-serif";
     for (const item of state.texts) {
+      if (item.x < left || item.x > right || item.y < top || item.y > bottom) continue;
       const alpha = Math.max(0, 1 - item.life / item.ttl);
       ctx.fillStyle = `rgba(${item.tone}, ${alpha})`;
       ctx.fillText(item.text, item.x, item.y);
     }
     ctx.restore();
+  }
+
+  let screenOverlays = null;
+
+  function ensureScreenOverlays() {
+    const w = Math.max(1, Math.round(state.w));
+    const h = Math.max(1, Math.round(state.h));
+    if (screenOverlays && screenOverlays.w === w && screenOverlays.h === h) {
+      return screenOverlays;
+    }
+
+    const day = makeSpriteCanvas(w, h);
+    const dg = day.getContext("2d");
+    const haze = dg.createLinearGradient(0, 0, 0, h);
+    haze.addColorStop(0, "rgba(255, 238, 176, 0.13)");
+    haze.addColorStop(0.45, "rgba(255, 226, 140, 0.045)");
+    haze.addColorStop(1, "rgba(70, 118, 58, 0.10)");
+    dg.fillStyle = haze;
+    dg.fillRect(0, 0, w, h);
+    dg.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 3; i += 1) {
+      const x = w * (0.2 + i * 0.31);
+      const y = h * (0.18 + i * 0.16);
+      const radius = Math.max(w, h) * (0.24 + i * 0.035);
+      const glow = dg.createRadialGradient(x, y, 0, x, y, radius);
+      glow.addColorStop(0, "rgba(255, 242, 180, 0.075)");
+      glow.addColorStop(1, "rgba(255, 242, 180, 0)");
+      dg.fillStyle = glow;
+      dg.beginPath();
+      dg.arc(x, y, radius, 0, TAU);
+      dg.fill();
+    }
+
+    const moon = makeSpriteCanvas(w, h);
+    const mg = moon.getContext("2d");
+    const tint = mg.createLinearGradient(0, 0, 0, h);
+    tint.addColorStop(0, "rgba(38, 82, 156, 0.34)");
+    tint.addColorStop(0.55, "rgba(24, 56, 116, 0.24)");
+    tint.addColorStop(1, "rgba(12, 30, 70, 0.34)");
+    mg.fillStyle = tint;
+    mg.fillRect(0, 0, w, h);
+    mg.globalCompositeOperation = "lighter";
+    const moonX = w * 0.72;
+    const moonY = h * 0.12;
+    const moonRadius = Math.max(w, h) * 0.62;
+    const moonGlow = mg.createRadialGradient(moonX, moonY, 0, moonX, moonY, moonRadius);
+    moonGlow.addColorStop(0, "rgba(148, 196, 255, 0.16)");
+    moonGlow.addColorStop(0.45, "rgba(110, 160, 235, 0.07)");
+    moonGlow.addColorStop(1, "rgba(90, 130, 210, 0)");
+    mg.fillStyle = moonGlow;
+    mg.beginPath();
+    mg.arc(moonX, moonY, moonRadius, 0, TAU);
+    mg.fill();
+    for (let i = 0; i < 3; i += 1) {
+      const mx = w * (0.18 + i * 0.31);
+      const my = h * (0.2 + i * 0.19);
+      const mistRadius = Math.max(w, h) * (0.2 + i * 0.04);
+      const mist = mg.createRadialGradient(mx, my, 0, mx, my, mistRadius);
+      mist.addColorStop(0, "rgba(176, 212, 255, 0.05)");
+      mist.addColorStop(1, "rgba(176, 212, 255, 0)");
+      mg.fillStyle = mist;
+      mg.beginPath();
+      mg.arc(mx, my, mistRadius, 0, TAU);
+      mg.fill();
+    }
+
+    const pu = makeSpriteCanvas(w, h);
+    const pg = pu.getContext("2d");
+    const puTint = pg.createLinearGradient(0, 0, w, h);
+    puTint.addColorStop(0, "rgba(86, 24, 154, 0.32)");
+    puTint.addColorStop(0.5, "rgba(132, 48, 205, 0.22)");
+    puTint.addColorStop(1, "rgba(58, 16, 126, 0.34)");
+    pg.fillStyle = puTint;
+    pg.fillRect(0, 0, w, h);
+    pg.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 5; i += 1) {
+      const x = w * (0.12 + i * 0.19);
+      const y = h * (0.24 + (i % 3) * 0.24);
+      const radius = Math.max(w, h) * (0.17 + (i % 2) * 0.06);
+      const glow = pg.createRadialGradient(x, y, 0, x, y, radius);
+      glow.addColorStop(0, `rgba(${i % 2 === 0 ? "214, 150, 255" : "160, 118, 255"}, 0.11)`);
+      glow.addColorStop(1, "rgba(150, 90, 255, 0)");
+      pg.fillStyle = glow;
+      pg.beginPath();
+      pg.arc(x, y, radius, 0, TAU);
+      pg.fill();
+    }
+    const vignette = pg.createRadialGradient(
+      w / 2,
+      h / 2,
+      Math.min(w, h) * 0.25,
+      w / 2,
+      h / 2,
+      Math.max(w, h) * 0.75
+    );
+    vignette.addColorStop(0, "rgba(120, 40, 200, 0)");
+    vignette.addColorStop(1, "rgba(96, 24, 180, 0.28)");
+    pg.fillStyle = vignette;
+    pg.fillRect(0, 0, w, h);
+
+    const hurt = makeSpriteCanvas(w, h);
+    const hg = hurt.getContext("2d");
+    const hurtGrad = hg.createRadialGradient(
+      w / 2,
+      h / 2,
+      Math.min(w, h) * 0.22,
+      w / 2,
+      h / 2,
+      Math.max(w, h) * 0.72
+    );
+    hurtGrad.addColorStop(0, "rgba(150, 20, 16, 0.22)");
+    hurtGrad.addColorStop(1, "rgba(160, 18, 14, 1)");
+    hg.fillStyle = hurtGrad;
+    hg.fillRect(0, 0, w, h);
+
+    screenOverlays = { w, h, day, moon, pu, hurt };
+    return screenOverlays;
   }
 
   function drawHurtOverlay(t) {
@@ -3492,77 +4843,39 @@ const Game = (() => {
       const strength = state.hurtFlash > 0
         ? Math.min(0.6, state.hurtFlash) * 0.55
         : 0.1 + pulse * 0.09;
-      const cx = state.w / 2;
-      const cy = state.h / 2;
-      const grad = ctx.createRadialGradient(
-        cx, cy, Math.min(state.w, state.h) * 0.22,
-        cx, cy, Math.max(state.w, state.h) * 0.72
-      );
-      grad.addColorStop(0, `rgba(150, 20, 16, ${strength * 0.22})`);
-      grad.addColorStop(1, `rgba(160, 18, 14, ${strength})`);
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, state.w, state.h);
+      const overlay = ensureScreenOverlays();
+      ctx.save();
+      ctx.globalAlpha = strength;
+      ctx.drawImage(overlay.hurt, 0, 0, state.w, state.h);
+      ctx.restore();
     }
   }
 
   function drawDayLight(t) {
-    ctx.save();
-    const haze = ctx.createLinearGradient(0, 0, 0, state.h);
-    haze.addColorStop(0, "rgba(255, 238, 176, 0.13)");
-    haze.addColorStop(0.45, "rgba(255, 226, 140, 0.045)");
-    haze.addColorStop(1, "rgba(70, 118, 58, 0.10)");
-    ctx.fillStyle = haze;
-    ctx.fillRect(0, 0, state.w, state.h);
-
-    ctx.globalCompositeOperation = "lighter";
-    for (let i = 0; i < 3; i += 1) {
-      const x = state.w * (0.2 + i * 0.31) + Math.sin(t * 0.12 + i * 2.1) * 90;
-      const y = state.h * (0.18 + i * 0.16) + Math.cos(t * 0.09 + i) * 50;
-      const radius = Math.max(state.w, state.h) * (0.24 + i * 0.035);
-      const glow = ctx.createRadialGradient(x, y, 0, x, y, radius);
-      glow.addColorStop(0, "rgba(255, 242, 180, 0.075)");
-      glow.addColorStop(1, "rgba(255, 242, 180, 0)");
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, TAU);
-      ctx.fill();
-    }
-    ctx.restore();
+    const overlay = ensureScreenOverlays();
+    ctx.drawImage(overlay.day, 0, 0, state.w, state.h);
   }
 
   function drawMoonLight(t) {
+    const overlay = ensureScreenOverlays();
+    ctx.drawImage(overlay.moon, 0, 0, state.w, state.h);
+  }
+
+  function drawParallelUniverseOverlay(t) {
+    const overlay = ensureScreenOverlays();
+    ctx.drawImage(overlay.pu, 0, 0, state.w, state.h);
+
+    // Sao lấp lánh trôi nhẹ (vẽ bằng sprite để nhẹ hơn)
+    const sprite = getToneSprite("238, 214, 255");
     ctx.save();
-    const tint = ctx.createLinearGradient(0, 0, 0, state.h);
-    tint.addColorStop(0, "rgba(38, 82, 156, 0.34)");
-    tint.addColorStop(0.55, "rgba(24, 56, 116, 0.24)");
-    tint.addColorStop(1, "rgba(12, 30, 70, 0.34)");
-    ctx.fillStyle = tint;
-    ctx.fillRect(0, 0, state.w, state.h);
-
     ctx.globalCompositeOperation = "lighter";
-    const x = state.w * 0.72;
-    const y = state.h * 0.12;
-    const radius = Math.max(state.w, state.h) * 0.62;
-    const glow = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    glow.addColorStop(0, "rgba(148, 196, 255, 0.16)");
-    glow.addColorStop(0.45, "rgba(110, 160, 235, 0.07)");
-    glow.addColorStop(1, "rgba(90, 130, 210, 0)");
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, TAU);
-    ctx.fill();
-
-    for (let i = 0; i < 3; i += 1) {
-      const mx = state.w * (0.18 + i * 0.31) + Math.sin(t * 0.09 + i * 2.4) * 110;
-      const my = state.h * (0.2 + i * 0.19) + Math.cos(t * 0.07 + i) * 60;
-      const mistRadius = Math.max(state.w, state.h) * (0.2 + i * 0.04);
-      const mist = ctx.createRadialGradient(mx, my, 0, mx, my, mistRadius);
-      mist.addColorStop(0, "rgba(176, 212, 255, 0.05)");
-      mist.addColorStop(1, "rgba(176, 212, 255, 0)");
-      ctx.fillStyle = mist;
-      ctx.beginPath();
-      ctx.arc(mx, my, mistRadius, 0, TAU);
-      ctx.fill();
+    for (let i = 0; i < 34; i += 1) {
+      const sx = ((i * 137.5 + t * (10 + (i % 5) * 4)) % (state.w + 60)) - 30;
+      const sy = (i * 73.3 + Math.sin(t * 0.5 + i) * 18) % state.h;
+      const alpha = 0.12 + 0.2 * (0.5 + 0.5 * Math.sin(t * 2 + i * 1.3));
+      const r = 1.8 + (i % 3) * 0.8;
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(sprite, sx - r, sy - r, r * 2, r * 2);
     }
     ctx.restore();
   }
@@ -3589,11 +4902,35 @@ const Game = (() => {
     drawBombs(t);
     drawBlasts();
     drawMines(t);
+    drawSkyMissiles(t);
+    drawBlackHoles(t);
+    drawIceZones(t);
     drawXRay();
 
-    for (const gem of state.gems) drawGem(gem, t);
+    const cullMargin = 180;
+    const viewLeft = camX - cullMargin;
+    const viewRight = camX + state.w + cullMargin;
+    const viewTop = camY - cullMargin;
+    const viewBottom = camY + state.h + cullMargin;
 
-    const actors = state.zombies.filter((zombie) => !zombie.dead);
+    for (const gem of state.gems) {
+      if (gem.x < viewLeft || gem.x > viewRight || gem.y < viewTop || gem.y > viewBottom) continue;
+      drawGem(gem, t);
+    }
+
+    const actors = [];
+    for (const zombie of state.zombies) {
+      if (zombie.dead || zombie.spawn <= 0) continue;
+      if (
+        zombie.x < viewLeft ||
+        zombie.x > viewRight ||
+        zombie.y < viewTop ||
+        zombie.y > viewBottom
+      ) {
+        continue;
+      }
+      actors.push(zombie);
+    }
     actors.push({ isPlayer: true, y: state.player.y });
     actors.sort((a, b) => a.y - b.y);
     for (const actor of actors) {
@@ -3602,9 +4939,12 @@ const Game = (() => {
     }
 
     drawSaws(t);
+    drawFireOrbs(t);
+    drawTornadoFx(t);
     for (const dart of state.darts) drawDart(dart);
     drawSlashes(t);
     drawLightning(t);
+    drawChainBolts(t);
     drawMeteors(t);
     drawZombieProjectiles(t);
     drawParticles();
@@ -3615,6 +4955,7 @@ const Game = (() => {
 
     if (state.mapType === "day") drawDayLight(t);
     else if (state.mapType === "moon") drawMoonLight(t);
+    if (state.parallelUniverseActive) drawParallelUniverseOverlay(t);
     drawHurtOverlay(t);
 
     if (state.lightningFlash > 0) {
@@ -3623,12 +4964,32 @@ const Game = (() => {
     }
   }
 
+  const ZOMBIE_PALETTES = {
+    normal: { body: "#2f5b3d", patch: "#24432e", arm: "#4d7654", head: "#739d75", eye: "#ffc06b", leg: "#172a1c", claw: "#8fb98e" },
+    runner: { body: "#326b58", patch: "#204a3d", arm: "#5c9a80", head: "#8fc4a9", eye: "#d8ff9a", leg: "#153028", claw: "#b6f0d6" },
+    warrior: { body: "#465341", patch: "#2c382b", arm: "#6d7a63", head: "#93a184", eye: "#ff7b5e", leg: "#1c241c", claw: "#b8c4ab" },
+    poison: { body: "#4c5f2b", patch: "#37471f", arm: "#789347", head: "#9db064", eye: "#c9ff66", leg: "#23301a", claw: "#c2e87e" },
+    archer: { body: "#5d4a3a", patch: "#3e2f26", arm: "#8b6f60", head: "#a88b7a", eye: "#ffd58a", leg: "#2b1d18", claw: "#e3c282" },
+    spear: { body: "#5a453a", patch: "#3c2c24", arm: "#7d6555", head: "#9a7e6e", eye: "#ffa372", leg: "#271814", claw: "#c9a23c" },
+    shield: { body: "#44544c", patch: "#2d3d34", arm: "#6a806e", head: "#8aa094", eye: "#8fd8c8", leg: "#1f2b24", claw: "#78b39d" },
+    crawler: { body: "#3d3d3d", patch: "#2a2a2a", arm: "#5a5a5a", head: "#7a7a7a", eye: "#ff5a5a", leg: "#1a1a1a", claw: "#c9a23c" },
+    summoner: { body: "#4a3d4a", patch: "#2d252d", arm: "#6a5a6a", head: "#8a7a8a", eye: "#d88aff", leg: "#1a141a", claw: "#c9a23c" },
+    burrower: { body: "#4a443a", patch: "#2d2a20", arm: "#6a6252", head: "#8a806a", eye: "#d8c88a", leg: "#1a1814", claw: "#c9b36a" },
+    howler: { body: "#4a3a4a", patch: "#2d252d", arm: "#6a5a6a", head: "#8a7a8a", eye: "#ff6a8a", leg: "#1a141a", claw: "#ff8aa2" },
+    boss: { body: "#5c2f28", patch: "#3c1c18", arm: "#8a4a3e", head: "#a76a58", eye: "#ffdc6a", leg: "#2a1210", claw: "#e0b36a" },
+    mutant: { body: "#405f34", patch: "#2c4526", arm: "#6d8f4e", head: "#9ab86a", eye: "#c8ff62", leg: "#20301c", claw: "#d2f08a" },
+    exploder: { body: "#5d4436", patch: "#402c22", arm: "#8a6448", head: "#a3805e", eye: "#ff9a4a", leg: "#2b1c14", claw: "#ffc27a" },
+    ice: { body: "#2d5a7a", patch: "#1a3d5a", arm: "#4a8aad", head: "#6fa6c8", eye: "#b7e7ff", leg: "#102535", claw: "#cbe9f7" },
+    fire: { body: "#5a2d1c", patch: "#3d1a0e", arm: "#ad4a2d", head: "#c86a3c", eye: "#ffaa66", leg: "#2a1008", claw: "#ffc27a" },
+  };
+
   function drawPoisonZones(t) {
     for (const zone of state.poisonZones) {
       const fadeIn = clamp(zone.life / 0.4, 0, 1);
       const fadeOut = clamp((zone.ttl - zone.life) / 1.1, 0, 1);
       const alpha = Math.min(fadeIn, fadeOut);
       if (alpha <= 0) continue;
+      if (!inView(zone.x, zone.y, zone.radius + 40)) continue;
 
       const pulse = 0.5 + 0.5 * Math.sin(t * 3.1 + zone.phase);
       const radius = zone.radius;
@@ -3637,18 +4998,17 @@ const Game = (() => {
       ctx.globalAlpha = alpha;
       ctx.translate(zone.x, zone.y);
 
-      const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, radius);
-      grad.addColorStop(0, `rgba(142, 235, 82, ${0.28 + pulse * 0.08})`);
-      grad.addColorStop(0.52, "rgba(98, 184, 54, 0.16)");
-      grad.addColorStop(0.84, "rgba(154, 220, 60, 0.08)");
-      grad.addColorStop(1, "rgba(42, 92, 32, 0)");
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, radius, radius * 0.72, 0, 0, TAU);
-      ctx.fill();
+      const glow = getZoneSprite("poison", [
+        [0, "rgba(142, 235, 82, 0.28)"],
+        [0.6, "rgba(98, 184, 54, 0.12)"],
+        [1, "rgba(42, 92, 32, 0)"],
+      ]);
+      ctx.globalAlpha = alpha * (0.82 + pulse * 0.18);
+      ctx.drawImage(glow, -radius, -radius * 0.72, radius * 2, radius * 1.44);
+      ctx.globalAlpha = alpha;
 
-      ctx.strokeStyle = `rgba(186, 255, 102, ${0.22 + pulse * 0.2})`;
-      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = `rgba(186, 255, 102, ${0.18 + pulse * 0.16})`;
+      ctx.lineWidth = 1.2;
       ctx.setLineDash([6, 9]);
       ctx.lineDashOffset = -t * 14;
       ctx.beginPath();
@@ -3656,15 +5016,15 @@ const Game = (() => {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      for (let i = 0; i < 7; i += 1) {
+      for (let i = 0; i < 4; i += 1) {
         const seed = i * 1.7 + zone.phase;
         const bx = Math.sin(seed * 3.7) * radius * 0.6;
         const by = Math.cos(seed * 2.3) * radius * 0.4;
         const rise = (t * 0.32 + i * 0.17) % 1;
-        const size = 1.2 + (i % 3) * 0.7;
-        ctx.globalAlpha = alpha * (0.12 + (1 - rise) * 0.42);
-        ctx.fillStyle = i % 2 ? "rgba(198, 255, 112, 0.62)" : "rgba(102, 212, 82, 0.54)";
-        circleIn(ctx, bx, by - rise * 10, size * (1 - rise * 0.4));
+        const size = 1.2 + (i % 2) * 0.7;
+        ctx.globalAlpha = alpha * (0.12 + (1 - rise) * 0.35);
+        ctx.fillStyle = i % 2 ? "rgba(198, 255, 112, 0.5)" : "rgba(102, 212, 82, 0.45)";
+        circleIn(ctx, bx, by - rise * 8, size * (1 - rise * 0.3));
       }
 
       ctx.restore();
@@ -3677,6 +5037,7 @@ const Game = (() => {
       const fadeOut = clamp((zone.ttl - zone.life) / 0.9, 0, 1);
       const alpha = Math.min(fadeIn, fadeOut);
       if (alpha <= 0) continue;
+      if (!inView(zone.x, zone.y, zone.radius + 40)) continue;
 
       const pulse = 0.5 + 0.5 * Math.sin(t * 5.2 + zone.phase);
       const radius = zone.radius;
@@ -3685,15 +5046,15 @@ const Game = (() => {
       ctx.globalAlpha = alpha;
       ctx.translate(zone.x, zone.y);
 
-      const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, radius);
-      grad.addColorStop(0, `rgba(255, 196, 82, ${0.34 + pulse * 0.1})`);
-      grad.addColorStop(0.42, "rgba(255, 122, 42, 0.2)");
-      grad.addColorStop(0.78, "rgba(208, 58, 24, 0.1)");
-      grad.addColorStop(1, "rgba(90, 22, 12, 0)");
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, radius, radius * 0.72, 0, 0, TAU);
-      ctx.fill();
+      const glow = getZoneSprite("fire", [
+        [0, "rgba(255, 196, 82, 0.44)"],
+        [0.42, "rgba(255, 122, 42, 0.2)"],
+        [0.78, "rgba(208, 58, 24, 0.1)"],
+        [1, "rgba(90, 22, 12, 0)"],
+      ]);
+      ctx.globalAlpha = alpha * (0.8 + pulse * 0.2);
+      ctx.drawImage(glow, -radius, -radius * 0.72, radius * 2, radius * 1.44);
+      ctx.globalAlpha = alpha;
 
       ctx.strokeStyle = `rgba(255, 176, 76, ${0.3 + pulse * 0.24})`;
       ctx.lineWidth = 1.5;
@@ -3704,19 +5065,20 @@ const Game = (() => {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      for (let i = 0; i < 11; i += 1) {
+      for (let i = 0; i < 8; i += 1) {
         const seed = i * 1.93 + zone.phase;
         const bx = Math.sin(seed * 3.1) * radius * 0.62;
         const by = Math.cos(seed * 2.7) * radius * 0.42;
         const rise = (t * 0.52 + i * 0.13) % 1;
         const size = 1.2 + (i % 4) * 0.65;
-        ctx.globalAlpha = alpha * (0.12 + (1 - rise) * 0.5);
-        ctx.fillStyle = i % 3 === 0
-          ? "rgba(255, 232, 150, 0.85)"
+        const tone = i % 3 === 0
+          ? "255, 232, 150"
           : i % 2
-            ? "rgba(255, 142, 54, 0.8)"
-            : "rgba(232, 74, 38, 0.7)";
-        circleIn(ctx, bx, by - rise * 13, size * (1 - rise * 0.35));
+            ? "255, 142, 54"
+            : "232, 74, 38";
+        const r = size * (1 - rise * 0.35) * 1.9;
+        ctx.globalAlpha = alpha * (0.1 + (1 - rise) * 0.36);
+        ctx.drawImage(getToneSprite(tone), bx - r, by - rise * 13 - r, r * 2, r * 2);
       }
 
       ctx.restore();
@@ -3725,6 +5087,7 @@ const Game = (() => {
 
   function drawBombs(t) {
     for (const bomb of state.bombs) {
+      if (!inView(bomb.x, bomb.y, 70) && !inView(bomb.tx, bomb.ty, 70)) continue;
       const k = clamp(bomb.t / bomb.duration, 0, 1);
       const spin = t * bomb.spin;
       const glow = 0.65 + 0.35 * Math.sin(t * 12 + bomb.spin);
@@ -3732,39 +5095,14 @@ const Game = (() => {
       ctx.save();
       ctx.globalAlpha = 0.9;
 
-      const aura = ctx.createRadialGradient(bomb.x, bomb.y, 1, bomb.x, bomb.y, 17);
-      aura.addColorStop(0, `rgba(255, 190, 92, ${0.42 * glow})`);
-      aura.addColorStop(1, "rgba(255, 96, 36, 0)");
-      ctx.fillStyle = aura;
-      ctx.beginPath();
-      ctx.arc(bomb.x, bomb.y, 17, 0, TAU);
-      ctx.fill();
+      const aura = getAuraSprite("bomb", "rgba(255, 190, 92, 0.5)", "rgba(255, 120, 60, 0.24)");
+      ctx.globalAlpha = 0.75 * glow;
+      ctx.drawImage(aura, bomb.x - 17, bomb.y - 17, 34, 34);
+      ctx.globalAlpha = 0.9;
 
       ctx.translate(bomb.x, bomb.y);
       ctx.rotate(spin);
-
-      const body = ctx.createLinearGradient(-7, -8, 7, 8);
-      body.addColorStop(0, "#5d665e");
-      body.addColorStop(0.55, "#2c352f");
-      body.addColorStop(1, "#141b16");
-      ctx.fillStyle = body;
-      ctx.beginPath();
-      ctx.arc(0, 0, 7.2, 0, TAU);
-      ctx.fill();
-
-      ctx.strokeStyle = "rgba(210, 226, 208, 0.4)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(0, 0, 7.2, Math.PI * 1.05, Math.PI * 1.85);
-      ctx.stroke();
-
-      ctx.fillStyle = "#6f4b2a";
-      ctx.fillRect(-1.4, -11.4, 2.8, 4.2);
-      ctx.fillStyle = "#ffd27a";
-      circleIn(ctx, 0, -12.2, 2.1);
-      ctx.fillStyle = "#fff3c8";
-      circleIn(ctx, 0, -12.8, 1);
-
+      ctx.drawImage(ensureFxSprites().bomb, -16, -16, 32, 32);
       ctx.rotate(-spin);
 
       if (k > 0.12) {
@@ -3788,6 +5126,9 @@ const Game = (() => {
 
     const cfg = SAW_LEVELS[Math.min(level, SAW_LEVELS.length) - 1];
     const p = state.player;
+    const sprites = ensureFxSprites();
+    const aura = getToneSprite("224, 244, 255");
+    const sawScale = cfg.size / 14;
 
     for (let i = 0; i < cfg.count; i += 1) {
       const angle = state.sawAngle + (i / cfg.count) * TAU;
@@ -3798,52 +5139,150 @@ const Game = (() => {
       ctx.save();
       ctx.translate(sx, sy);
 
-      const aura = ctx.createRadialGradient(0, 0, 2, 0, 0, size * 2.1);
-      aura.addColorStop(0, "rgba(224, 244, 255, 0.2)");
-      aura.addColorStop(1, "rgba(130, 190, 220, 0)");
-      ctx.fillStyle = aura;
-      ctx.beginPath();
-      ctx.arc(0, 0, size * 2.1, 0, TAU);
-      ctx.fill();
+      ctx.globalAlpha = 0.2;
+      ctx.drawImage(aura, -size * 2.1, -size * 2.1, size * 4.2, size * 4.2);
+      ctx.globalAlpha = 1;
 
       ctx.rotate(t * (8.5 + level * 1.8) + i * 1.37);
-
-      ctx.fillStyle = "#b9c8d2";
-      for (let j = 0; j < 8; j += 1) {
-        const tooth = (j / 8) * TAU;
-        ctx.save();
-        ctx.rotate(tooth);
-        ctx.beginPath();
-        ctx.moveTo(size * 0.72, -size * 0.2);
-        ctx.lineTo(size * 1.24, 0);
-        ctx.lineTo(size * 0.72, size * 0.2);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      }
-
-      const blade = ctx.createLinearGradient(-size, -size, size, size);
-      blade.addColorStop(0, "#eef5f8");
-      blade.addColorStop(0.5, "#9cacb8");
-      blade.addColorStop(1, "#596871");
-      ctx.fillStyle = blade;
-      ctx.beginPath();
-      ctx.arc(0, 0, size * 0.82, 0, TAU);
-      ctx.fill();
-
-      ctx.strokeStyle = "rgba(245, 251, 255, 0.65)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(0, 0, size * 0.58, 0, TAU);
-      ctx.stroke();
-
-      ctx.fillStyle = "#33424a";
-      circleIn(ctx, 0, 0, size * 0.3);
-      ctx.fillStyle = "#d7a63f";
-      circleIn(ctx, 0, 0, size * 0.13);
+      ctx.scale(sawScale, sawScale);
+      ctx.drawImage(sprites.saw, -32, -32, 64, 64);
 
       ctx.restore();
     }
+  }
+
+  function drawFireOrbs(t) {
+    const level = state.skills.fireOrb;
+    if (!level) return;
+
+    const cfg = FIRE_ORB_LEVELS[Math.min(level, FIRE_ORB_LEVELS.length) - 1];
+    const p = state.player;
+    const sprites = ensureFxSprites();
+    const core = sprites.orbCore;
+    const tongue = sprites.orbTongue;
+    const halo = getAuraSprite(
+      "fireOrb",
+      "rgba(255, 196, 96, 0.7)",
+      "rgba(255, 104, 34, 0.3)"
+    );
+    const ember = getToneSprite("255, 178, 82");
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.globalCompositeOperation = "lighter";
+
+    for (let i = 0; i < cfg.count; i += 1) {
+      const angle = state.fireOrbAngle + (i / cfg.count) * TAU;
+      const fx = Math.cos(angle) * cfg.radius;
+      const fy = Math.sin(angle) * cfg.radius;
+      const flick = 0.88 + 0.12 * Math.sin(t * 15 + i * 2.37);
+      const base = cfg.size;
+
+      ctx.save();
+      ctx.translate(fx, fy);
+
+      // Quầng lửa lớn, rõ ràng
+      ctx.globalAlpha = 0.45 + 0.1 * Math.sin(t * 12 + i);
+      const haloR = base * 4.1;
+      ctx.drawImage(halo, -haloR, -haloR, haloR * 2, haloR * 2);
+
+      // Ngọn lửa chính (lõi trắng -> vàng -> cam)
+      const coreR = base * 1.85 * flick;
+      ctx.globalAlpha = 1;
+      ctx.drawImage(core, -coreR, -coreR, coreR * 2, coreR * 2);
+
+      // Lưỡi lửa vươn ra ngoài (dài hơn lõi để thấy rõ hình ngọn lửa)
+      const sway = Math.sin(t * 9 + i * 1.7) * 0.16;
+      ctx.rotate(angle + Math.PI / 2 + sway);
+      const tongueH = base * 4.0 * flick;
+      const tongueW = base * 1.85;
+      ctx.drawImage(tongue, -tongueW / 2, -tongueH * 0.8, tongueW, tongueH);
+
+      // Lưỡi phụ lệch bên tạo silhouette lửa
+      ctx.rotate(0.62);
+      ctx.globalAlpha = 0.75;
+      ctx.drawImage(
+        tongue,
+        -tongueW * 0.3,
+        -tongueH * 0.52,
+        tongueW * 0.72,
+        tongueH * 0.66
+      );
+      ctx.globalAlpha = 1;
+
+      // Tia lửa nhỏ xoay quanh
+      for (let s = 0; s < 3; s += 1) {
+        const a = t * (3.5 + s * 0.8) + i * 2.1 + s * 2.4;
+        const rr = base * (2.1 + s * 0.4);
+        const er = base * (0.55 + 0.2 * Math.sin(t * 16 + s));
+        ctx.globalAlpha = 0.5 + 0.3 * Math.sin(t * 11 + s + i);
+        ctx.drawImage(ember, Math.cos(a) * rr - er, Math.sin(a) * rr - er, er * 2, er * 2);
+      }
+
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  function drawTornadoFx(t) {
+    if (!state.tornadoFx || state.tornadoFx <= 0) return;
+    const p = state.player;
+    const k = 1 - state.tornadoFx / TORNADO_FX_TTL;
+    const alpha = Math.max(0, 1 - k) * 0.5;
+    const spin = t * 5;
+    const radius = TORNADO_RADIUS * 1.0;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.globalCompositeOperation = "lighter";
+
+    // Vây xoáy mạnh mẽ hướng vào tâm (nhiều lớp, rõ nét)
+    for (let i = 0; i < 10; i += 1) {
+      const a = spin * 0.9 + (i / 10) * TAU;
+      const rInner = radius * (0.25 + 0.08 * Math.sin(t * 7 + i));
+      const rOuter = radius * (0.85 + 0.12 * Math.cos(t * 6 + i));
+      const layerAlpha = alpha * (0.55 - i * 0.045);
+      if (layerAlpha <= 0) continue;
+      ctx.strokeStyle = `rgba(180, 220, 255, ${layerAlpha})`;
+      ctx.lineWidth = Math.max(1.2, 3 - i * 0.22);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rOuter, rOuter * 0.5, a, 0, TAU);
+      ctx.stroke();
+    }
+
+    // Đường spiraling hút vào tâm
+    for (let i = 0; i < 8; i += 1) {
+      const a = spin * 1.3 + (i / 8) * TAU;
+      const startR = radius * 0.8;
+      const endR = radius * 0.2;
+      ctx.strokeStyle = `rgba(220, 240, 255, ${alpha * 0.45})`;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * startR, Math.sin(a) * startR);
+      ctx.lineTo(Math.cos(a + 0.7) * endR, Math.sin(a + 0.7) * endR);
+      ctx.stroke();
+    }
+
+    // Trụ sáng trung tâm rõ nét (sprite cached)
+    const core = getAuraSprite(
+      "tornadoCore",
+      "rgba(240, 248, 255, 0.85)",
+      "rgba(160, 210, 255, 0.45)"
+    );
+    const coreR = radius * 0.6;
+    ctx.globalAlpha = alpha * 0.9;
+    ctx.drawImage(core, -coreR, -coreR, coreR * 2, coreR * 2);
+    ctx.globalAlpha = 1;
+
+    // Viền sáng ngoài cùng
+    ctx.strokeStyle = `rgba(200, 230, 255, ${alpha * 0.35})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 0.95, 0, TAU);
+    ctx.stroke();
+
+    ctx.restore();
   }
 
   function drawSlashes(t) {
@@ -3872,6 +5311,7 @@ const Game = (() => {
 
   function drawLightning(t) {
     for (const strike of state.lightningStrikes) {
+      if (!inView(strike.x, strike.y, 120)) continue;
       const k = clamp(strike.life / strike.ttl, 0, 1);
       const alpha = Math.pow(Math.max(0, Math.sin(k * Math.PI)), 0.62);
       if (alpha <= 0.01) continue;
@@ -3883,23 +5323,20 @@ const Game = (() => {
       ctx.translate(strike.x, strike.y);
       ctx.globalCompositeOperation = "lighter";
 
-      // Cột sáng mờ từ trời xuống
-      const beam = ctx.createLinearGradient(0, -H, 0, 10);
-      beam.addColorStop(0, "rgba(140, 190, 255, 0)");
-      beam.addColorStop(0.55, `rgba(160, 205, 255, ${alpha * 0.10})`);
-      beam.addColorStop(1, `rgba(210, 236, 255, ${alpha * 0.20})`);
-      ctx.fillStyle = beam;
-      ctx.fillRect(-22, -H, 44, H + 16);
+      // Cột sáng mờ từ trời xuống (sprite cached)
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(ensureFxSprites().lightningBeam, -22, -620, 44, 636);
+      ctx.globalAlpha = 1;
 
-      // Quầng sáng va chạm mặt đất
-      const impact = ctx.createRadialGradient(0, 6, 2, 0, 6, 74);
-      impact.addColorStop(0, `rgba(235, 248, 255, ${alpha * 0.72})`);
-      impact.addColorStop(0.28, `rgba(150, 205, 255, ${alpha * 0.34})`);
-      impact.addColorStop(1, "rgba(90, 150, 255, 0)");
-      ctx.fillStyle = impact;
-      ctx.beginPath();
-      ctx.ellipse(0, 6, 74, 28, 0, 0, TAU);
-      ctx.fill();
+      // Quầng sáng va chạm mặt đất (sprite cached)
+      const impact = getZoneSprite("lightningImpact", [
+        [0, "rgba(235, 248, 255, 0.72)"],
+        [0.28, "rgba(150, 205, 255, 0.34)"],
+        [1, "rgba(90, 150, 255, 0)"],
+      ]);
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(impact, -74, -22, 148, 56);
+      ctx.globalAlpha = 1;
 
       // Tia sét chính, giật zic-zac từ trên trời xuống
       const points = [];
@@ -3979,6 +5416,7 @@ const Game = (() => {
 
   function drawMeteors(t) {
     for (const meteor of state.meteors) {
+      if (!inView(meteor.tx, meteor.ty, 240) && !inView(meteor.x, meteor.y, 240)) continue;
       const k = clamp(meteor.fall || 0, 0, 1);
 
       if (!meteor.impacted) {
@@ -4002,27 +5440,14 @@ const Game = (() => {
         ctx.translate(meteor.x, meteor.y);
         ctx.globalCompositeOperation = "lighter";
 
-        const trail = ctx.createLinearGradient(0, -130, 0, 12);
-        trail.addColorStop(0, "rgba(255, 120, 32, 0)");
-        trail.addColorStop(0.55, "rgba(255, 138, 44, 0.28)");
-        trail.addColorStop(1, "rgba(255, 220, 150, 0.72)");
-        ctx.fillStyle = trail;
-        ctx.beginPath();
-        ctx.moveTo(-15, 2);
-        ctx.quadraticCurveTo(-6, -70, -2, -132);
-        ctx.lineTo(4, -132);
-        ctx.quadraticCurveTo(9, -68, 15, 2);
-        ctx.closePath();
-        ctx.fill();
+        ctx.drawImage(ensureFxSprites().meteorTrail, -16, -136, 32, 140);
 
-        const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, 34);
-        glow.addColorStop(0, "rgba(255, 246, 200, 0.95)");
-        glow.addColorStop(0.32, "rgba(255, 164, 62, 0.65)");
-        glow.addColorStop(1, "rgba(255, 90, 20, 0)");
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(0, 0, 34, 0, TAU);
-        ctx.fill();
+        const glow = getAuraSprite(
+          "meteor",
+          "rgba(255, 246, 200, 0.95)",
+          "rgba(255, 164, 62, 0.6)"
+        );
+        ctx.drawImage(glow, -34, -34, 68, 68);
 
         ctx.fillStyle = "#4a2c1e";
         ctx.beginPath();
@@ -4040,6 +5465,7 @@ const Game = (() => {
 
   function drawBlasts() {
     for (const blast of state.blasts) {
+      if (!inView(blast.x, blast.y, blast.radius + 60)) continue;
       const k = clamp(blast.life / blast.ttl, 0, 1);
       const alpha = Math.max(0, 1 - k);
       const radius = blast.radius * (0.3 + k * 0.82);
@@ -4048,14 +5474,10 @@ const Game = (() => {
       ctx.save();
       ctx.translate(blast.x, blast.y);
 
-      const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, radius);
-      glow.addColorStop(0, `rgba(${blast.tone}, ${alpha * 0.42})`);
-      glow.addColorStop(0.6, `rgba(${blast.tone}, ${alpha * 0.18})`);
-      glow.addColorStop(1, `rgba(${blast.tone}, 0)`);
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, radius, radius * 0.58, 0, 0, TAU);
-      ctx.fill();
+      const glow = getToneSprite(blast.tone);
+      ctx.globalAlpha = alpha * 0.42;
+      ctx.drawImage(glow, -radius, -radius * 0.58, radius * 2, radius * 1.16);
+      ctx.globalAlpha = 1;
 
       ctx.strokeStyle = `rgba(${blast.tone}, ${alpha * 0.8})`;
       ctx.lineWidth = 2.6 * alpha;
@@ -4068,6 +5490,7 @@ const Game = (() => {
 
   function drawMines(t) {
     for (const mine of state.mines) {
+      if (!inView(mine.x, mine.y, 40)) continue;
       const armed = mine.armed;
       const pulse = 0.5 + 0.5 * Math.sin(t * (armed ? 8 : 3));
       const flash = armed ? 1 : 0.4 + pulse * 0.3;
@@ -4075,17 +5498,14 @@ const Game = (() => {
       ctx.save();
       ctx.translate(mine.x, mine.y);
 
-      // Mine body (dark sphere)
-      ctx.fillStyle = armed ? "#2d2d2d" : "#1a1a1a";
-      ctx.beginPath();
-      ctx.arc(0, 0, 6, 0, TAU);
-      ctx.fill();
-
-      // Trigger button (red when armed, gray when not)
-      ctx.fillStyle = armed ? "#ff4444" : "#666666";
-      ctx.beginPath();
-      ctx.arc(0, 0, 2.5, 0, TAU);
-      ctx.fill();
+      // Mine body + trigger (sprite cached)
+      ctx.drawImage(
+        armed ? ensureFxSprites().mines.armed : ensureFxSprites().mines.idle,
+        -12,
+        -12,
+        24,
+        24
+      );
 
       // Warning pulse ring when armed
       if (armed) {
@@ -4116,61 +5536,227 @@ const Game = (() => {
     }
   }
 
+  function drawSkyMissiles(t) {
+    for (const m of state.skyMissiles) {
+      if (!inView(m.tx, m.y, 160)) continue;
+      ctx.save();
+      ctx.translate(m.tx, m.y);
+
+      const pulse = 0.5 + 0.5 * Math.sin(t * 10);
+
+      // V껍 thẳng đứng khi rơi xuống
+      ctx.strokeStyle = "rgba(255, 140, 60, 0.8)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -60);
+      ctx.lineTo(0, 0);
+      ctx.stroke();
+
+      // Ngọn tên lửa (sprite cached)
+      ctx.drawImage(ensureFxSprites().missileFlame, -11, -19, 22, 22);
+
+      // Halo xung quanh khi gần va chạm
+      if (m.y >= m.ty - 10) {
+        const fade = Math.min(1, m.impactLife / 0.2);
+        ctx.strokeStyle = `rgba(255, 120, 60, ${0.5 * fade})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, m.radius * (1 + pulse * 0.3), 0, TAU);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  function drawBlackHoles(t) {
+    for (const hole of state.blackHoles) {
+      const fade = Math.min(1, hole.life * 5) * Math.min(1, (hole.ttl - hole.life) * 4);
+      if (fade <= 0.01) continue;
+
+      const radius = hole.radius || BLACK_HOLE_RADIUS;
+      if (!inView(hole.x, hole.y, radius + 50)) continue;
+      const spin = t * 1.6 + (hole.seed || 0);
+      const cx = hole.x;
+      const cy = hole.y;
+      const sprites = ensureFxSprites();
+
+      // Vùng tối + tâm đen đã bake sẵn (2 drawImage thay cho 2 lần fill path)
+      const discR = radius * 0.65;
+      ctx.globalAlpha = 0.35 * fade;
+      ctx.drawImage(sprites.blackHoleDisc, cx - discR, cy - discR, discR * 2, discR * 2);
+
+      const coreR = 14 + Math.sin(t * 5 + spin) * 2;
+      ctx.globalAlpha = 0.85 * fade;
+      ctx.drawImage(sprites.blackHoleCore, cx - coreR, cy - coreR, coreR * 2, coreR * 2);
+      ctx.globalAlpha = 1;
+
+      // Vòng xoáy duy nhất
+      const r = coreR + 8 + Math.sin(spin) * 2;
+      const tilt = spin * 0.7;
+      ctx.strokeStyle = `rgba(190, 118, 255, ${0.28 * fade})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, r, r * 0.38, tilt, 0, TAU);
+      ctx.stroke();
+    }
+  }
+
+  function drawIceZones(t) {
+    for (const zone of state.iceZones) {
+      const fade = Math.min(1, zone.life * 2) * Math.min(1, (zone.ttl - zone.life) * 2);
+      if (fade <= 0.01) continue;
+      const radius = zone.radius;
+      if (!inView(zone.x, zone.y, radius + 40)) continue;
+      const pulse = 0.5 + 0.5 * Math.sin(t * 4);
+      ctx.save();
+      ctx.translate(zone.x, zone.y);
+      ctx.globalAlpha = 0.15 * fade * (0.7 + pulse * 0.3);
+      const zoneGlow = getZoneSprite("ice", [
+        [0, "rgba(160, 224, 255, 0.35)"],
+        [1, "rgba(160, 224, 255, 0)"],
+      ]);
+      ctx.drawImage(zoneGlow, -radius, -radius, radius * 2, radius * 2);
+      ctx.strokeStyle = `rgba(160, 224, 255, ${0.35 * fade * (0.7 + pulse * 0.3)})`;
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([6, 10]);
+      ctx.lineDashOffset = -t * 12;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 0.9, 0, TAU);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+
+  function drawChainBolts(t) {
+    const left = state.camera.x - 80;
+    const top = state.camera.y - 80;
+    const right = left + state.w + 160;
+    const bottom = top + state.h + 160;
+    for (const bolt of state.chainBolts) {
+      if (
+        Math.max(bolt.x1, bolt.x2) < left ||
+        Math.min(bolt.x1, bolt.x2) > right ||
+        Math.max(bolt.y1, bolt.y2) < top ||
+        Math.min(bolt.y1, bolt.y2) > bottom
+      ) {
+        continue;
+      }
+      const k = clamp(bolt.life / bolt.ttl, 0, 1);
+      const alpha = Math.pow(Math.max(0, 1 - k), 0.7);
+      if (alpha <= 0.02) continue;
+
+      const dx = bolt.x2 - bolt.x1;
+      const dy = bolt.y2 - bolt.y1;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+      const seed = bolt.seed || 0;
+      const segments = 9;
+      const spread = Math.min(24, len * 0.2);
+      const points = [];
+
+      for (let i = 0; i <= segments; i += 1) {
+        const p = i / segments;
+        const edge = i === 0 || i === segments ? 0 : Math.sin(p * Math.PI);
+        const jitter = (Math.sin(seed + i * 12.9 + t * 46) * 0.5 + (Math.random() - 0.5) * 0.8) * spread * edge;
+        points.push({
+          x: bolt.x1 + dx * p + nx * jitter,
+          y: bolt.y1 + dy * p + ny * jitter,
+        });
+      }
+
+      const trace = () => {
+        ctx.beginPath();
+        points.forEach((point, index) => {
+          if (index === 0) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        });
+        ctx.stroke();
+      };
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      // Quầng vàng
+      ctx.strokeStyle = `rgba(255, 204, 32, ${alpha * 0.35})`;
+      ctx.lineWidth = 10;
+      trace();
+
+      // Dây điện vàng
+      ctx.strokeStyle = `rgba(255, 230, 84, ${alpha * 0.95})`;
+      ctx.lineWidth = 3.6;
+      trace();
+
+      // Lõi trắng
+      ctx.strokeStyle = `rgba(255, 255, 238, ${alpha})`;
+      ctx.lineWidth = 1.5;
+      trace();
+
+      // Điểm lóe ở hai đầu dây (sprite cached)
+      ctx.globalAlpha = alpha * 0.8;
+      ctx.drawImage(getToneSprite("255, 255, 230"), bolt.x1 - 20, bolt.y1 - 20, 40, 40);
+      ctx.globalAlpha = alpha * 0.85;
+      ctx.drawImage(getToneSprite("255, 230, 80"), bolt.x2 - 24, bolt.y2 - 24, 48, 48);
+      ctx.globalAlpha = 1;
+
+      ctx.restore();
+    }
+  }
+
   function drawXRay() {
     try {
       if (!ctx || !state.skills || state.skills.xRay <= 0) return;
-      if (state.xRayLaserTimer > 1.4 || state.xRayLaserTimer <= 0) return;
-      if (!state.player || typeof state.player.x !== 'number' || typeof state.player.y !== 'number') return;
 
-      const p = state.player;
-      const target = nearestZombie(500);
-      if (!target || typeof target.x !== 'number' || typeof target.y !== 'number') return;
+      for (const beam of state.xRayBeams) {
+        if (!beam) continue;
 
-      const dx = target.x - p.x;
-      const dy = target.y - p.y;
-      const angle = Math.atan2(dy, dx);
-      if (!isFinite(angle)) return;
+        const k = clamp(beam.life / beam.ttl, 0, 1);
+        const alpha = Math.max(0, 1 - k);
+        const range = beam.range;
 
-      const range = 500;
-      const k = 1 - (state.xRayLaserTimer / 1.5);
-      const alpha = Math.max(0, Math.min(1, 1 - k * 2));
+        ctx.save();
+        ctx.translate(beam.x, beam.y);
+        ctx.rotate(beam.angle);
+        ctx.globalCompositeOperation = "lighter";
 
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(angle);
+        // Quầng tím dọc theo tia (sprite cached)
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(ensureFxSprites().xRayGlow, 0, -20, range, 40);
+        ctx.globalAlpha = 1;
 
-      // Laser beam
-      const grad = ctx.createLinearGradient(0, 0, range, 0);
-      grad.addColorStop(0, "rgba(180, 100, 255, " + alpha * 0.9 + ")");
-      grad.addColorStop(0.5, "rgba(220, 140, 255, " + alpha * 0.6 + ")");
-      grad.addColorStop(1, "rgba(180, 100, 255, 0)");
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.moveTo(-4, 2);
-      ctx.lineTo(range, 8);
-      ctx.lineTo(range, -8);
-      ctx.lineTo(-4, -2);
-      ctx.closePath();
-      ctx.fill();
+        // Laser beam (sprite cached)
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(ensureFxSprites().xRayBeam, -4, -12, range + 4, 24);
+        ctx.globalAlpha = 1;
 
-      // Core beam
-      ctx.fillStyle = "rgba(255, 255, 255, " + alpha * 0.5 + ")";
-      ctx.beginPath();
-      ctx.moveTo(-1.5, 1);
-      ctx.lineTo(range * 0.9, 1.5);
-      ctx.lineTo(range * 0.9, -1.5);
-      ctx.lineTo(-1.5, -1);
-      ctx.closePath();
-      ctx.fill();
+        // Core beam
+        ctx.fillStyle = "rgba(255, 255, 255, " + alpha * 0.72 + ")";
+        ctx.beginPath();
+        ctx.moveTo(-1.5, 1.6);
+        ctx.lineTo(range * 0.92, 2.4);
+        ctx.lineTo(range * 0.92, -2.4);
+        ctx.lineTo(-1.5, -1.6);
+        ctx.closePath();
+        ctx.fill();
 
-      // End flash
-      const pulse = typeof t === 'number' ? Math.sin(t * 20) : 0;
-      ctx.fillStyle = "rgba(220, 140, 255, " + alpha * 0.8 + ")";
-      ctx.beginPath();
-      ctx.arc(range, 0, 8 + pulse * 2, 0, TAU);
-      ctx.fill();
+        // Đầu tia lóe sáng (sprite cached)
+        const pulse = Math.sin(k * Math.PI * 4) * 0.5 + 0.5;
+        const endGlow = getZoneSprite("xRayEnd", [
+          [0, "rgba(255, 255, 255, 0.9)"],
+          [0.35, "rgba(220, 140, 255, 0.55)"],
+          [1, "rgba(180, 100, 255, 0)"],
+        ]);
+        const endR = 34 + pulse * 6;
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(endGlow, range - endR, -endR, endR * 2, endR * 2);
+        ctx.globalAlpha = 1;
 
-      ctx.restore();
+        ctx.restore();
+      }
     } catch (e) {
       // Prevent X-ray draw from freezing the game
       try { ctx.restore(); } catch (e2) { /* ignore */ }
@@ -4178,35 +5764,204 @@ const Game = (() => {
   }
 
   function drawZombieProjectiles(t) {
+    const sprites = ensureFxSprites().projectiles;
     for (const pr of state.zombieProjectiles) {
+      if (!inView(pr.x, pr.y, 60)) continue;
+      const sprite =
+        pr.kind === "arrow"
+          ? sprites.arrow
+          : pr.kind === "iceball"
+            ? sprites.iceball
+            : pr.kind === "fireball"
+              ? sprites.fireball
+              : sprites.spear;
       ctx.save();
       ctx.translate(pr.x, pr.y);
       ctx.rotate(Math.atan2(pr.vy, pr.vx));
-      ctx.strokeStyle = pr.kind === "arrow" ? "#d8f7ff" : "#e3c282";
-      ctx.lineWidth = pr.kind === "arrow" ? 1.7 : 2.8;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(pr.kind === "arrow" ? -9 : -13, 0);
-      ctx.stroke();
-      if (pr.kind === "arrow") {
-        ctx.fillStyle = "#d8f7ff";
-        ctx.beginPath();
-        ctx.moveTo(-9, -1.6);
-        ctx.lineTo(-15, 0);
-        ctx.lineTo(-9, 1.6);
-        ctx.fill();
-      } else {
-        ctx.fillStyle = "#a4723c";
-        ctx.beginPath();
-        ctx.moveTo(-13, -2);
-        ctx.lineTo(-19, 0);
-        ctx.lineTo(-13, 2);
-        ctx.fill();
-      }
+      ctx.drawImage(sprite, -20, -20, 40, 40);
       ctx.restore();
     }
+  }
+
+  const zombieBodySpriteCache = new Map();
+  const zombieHeadSpriteCache = new Map();
+
+  function getZombieBodySprite(type, flash) {
+    const key = type + (flash ? "|f" : "|n");
+    const cached = zombieBodySpriteCache.get(key);
+    if (cached) return cached;
+
+    const p = ZOMBIE_PALETTES[type] || ZOMBIE_PALETTES.normal;
+    const isCrawler = type === "crawler";
+    const c = makeSpriteCanvas(64, 64);
+    const g = c.getContext("2d");
+    g.translate(32, 32);
+
+    g.fillStyle = flash ? "#e6ffe9" : p.body;
+    g.beginPath();
+    g.ellipse(0, isCrawler ? -0.4 : 1, isCrawler ? 11 : 8.6, isCrawler ? 6 : 11.2, 0, 0, TAU);
+    g.fill();
+
+    g.fillStyle = flash ? "#a9d7b1" : p.patch;
+    g.beginPath();
+    g.moveTo(-8, -2);
+    g.lineTo(8, -3);
+    g.lineTo(6.5, 7);
+    g.lineTo(-6.5, 6);
+    g.closePath();
+    g.fill();
+
+    if (type === "warrior") {
+      g.fillStyle = flash ? "#d8e0d2" : "#5c665a";
+      circleIn(g, -7.4, -4.2, 3.8);
+      circleIn(g, 7.4, -4.2, 3.8);
+      g.fillStyle = "#39443a";
+      circleIn(g, -7.4, -4.2, 1.4);
+      circleIn(g, 7.4, -4.2, 1.4);
+      g.strokeStyle = "rgba(190, 200, 180, 0.35)";
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(-5, 0);
+      g.lineTo(5, 0);
+      g.stroke();
+    } else if (type === "runner") {
+      g.strokeStyle = "rgba(150, 230, 195, 0.28)";
+      g.lineWidth = 1.2;
+      for (let i = 0; i < 2; i += 1) {
+        g.beginPath();
+        g.moveTo(-13 - i * 3, 4 + i * 4);
+        g.lineTo(-22 - i * 4, 8 + i * 4);
+        g.stroke();
+      }
+    } else if (type === "poison") {
+      g.fillStyle = "rgba(198, 255, 110, 0.4)";
+      circleIn(g, -4.4, -3.2, 1.3);
+      circleIn(g, 3.8, 2.4, 1);
+      circleIn(g, -1.6, 5.4, 0.9);
+      g.strokeStyle = "rgba(202, 255, 126, 0.35)";
+      g.lineWidth = 1;
+      g.beginPath();
+      g.arc(0, 1, 6.2, Math.PI * 0.18, Math.PI * 0.82);
+      g.stroke();
+    } else if (type === "mutant") {
+      g.fillStyle = "rgba(176, 255, 116, 0.47)";
+      circleIn(g, -4.6, -3.6, 1.8);
+      circleIn(g, 4.2, 1.6, 2.2);
+      circleIn(g, -1.4, 5.8, 1.4);
+      circleIn(g, 5.8, -5.2, 1.3);
+      g.strokeStyle = "rgba(132, 220, 92, 0.42)";
+      g.lineWidth = 1.1;
+      g.beginPath();
+      g.moveTo(-6.6, 0.5);
+      g.quadraticCurveTo(-2, 3.4, 2.6, 0.9);
+      g.stroke();
+    } else if (type === "exploder") {
+      g.strokeStyle = "rgba(255, 154, 62, 0.57)";
+      g.lineWidth = 1.4;
+      g.beginPath();
+      g.moveTo(-6.8, -3.4);
+      g.lineTo(-2.4, -1);
+      g.lineTo(-4.2, 2.8);
+      g.moveTo(3.2, -4.6);
+      g.lineTo(5.8, -0.6);
+      g.lineTo(2.4, 2.6);
+      g.stroke();
+    } else if (type === "boss") {
+      g.fillStyle = flash ? "#f0d8c4" : "#3f201b";
+      g.beginPath();
+      g.moveTo(-9, -6);
+      g.lineTo(-4, -2);
+      g.lineTo(0, -6.5);
+      g.lineTo(4, -2);
+      g.lineTo(9, -6);
+      g.lineTo(7, 5);
+      g.lineTo(0, 8);
+      g.lineTo(-7, 5);
+      g.closePath();
+      g.fill();
+      g.strokeStyle = "rgba(255, 198, 120, 0.55)";
+      g.lineWidth = 1.2;
+      g.beginPath();
+      g.moveTo(-5.4, 1.2);
+      g.lineTo(5.4, 1.2);
+      g.moveTo(-3.6, 4);
+      g.lineTo(3.6, 4);
+      g.stroke();
+    }
+
+    zombieBodySpriteCache.set(key, c);
+    return c;
+  }
+
+  function getZombieHeadSprite(type, flash) {
+    const key = type + (flash ? "|f" : "|n");
+    const cached = zombieHeadSpriteCache.get(key);
+    if (cached) return cached;
+
+    const p = ZOMBIE_PALETTES[type] || ZOMBIE_PALETTES.normal;
+    const c = makeSpriteCanvas(48, 48);
+    const g = c.getContext("2d");
+    g.translate(24, 24);
+
+    g.fillStyle = flash ? "#e6ffe9" : p.head;
+    circleIn(g, 0, 0, 6.5);
+
+    if (type === "warrior") {
+      g.strokeStyle = "#8a9382";
+      g.lineWidth = 2.4;
+      g.beginPath();
+      g.arc(0, 0, 7.2, Math.PI * 0.98, Math.PI * 2.02);
+      g.stroke();
+      g.fillStyle = "#aab39f";
+      g.beginPath();
+      g.moveTo(0, -10.4);
+      g.lineTo(2.6, -6);
+      g.lineTo(-2.6, -6);
+      g.closePath();
+      g.fill();
+    } else if (type === "runner") {
+      g.strokeStyle = "rgba(110, 190, 160, 0.5)";
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(0, 0, 7.1, Math.PI * 0.9, Math.PI * 2.1);
+      g.stroke();
+    } else if (type === "poison") {
+      g.fillStyle = "rgba(202, 255, 112, 0.55)";
+      circleIn(g, -5.6, -4.4, 1.1);
+      circleIn(g, 5.2, -5.2, 0.8);
+      circleIn(g, 4.6, -7.6, 0.6);
+    } else if (type === "mutant") {
+      g.fillStyle = "#2a2a20";
+      g.beginPath();
+      g.moveTo(-6.2, -3.4);
+      g.lineTo(-8.8, -9.4);
+      g.lineTo(-4.4, -5.8);
+      g.closePath();
+      g.fill();
+      g.beginPath();
+      g.moveTo(6.2, -3.4);
+      g.lineTo(8.8, -9.4);
+      g.lineTo(4.4, -5.8);
+      g.closePath();
+      g.fill();
+    } else if (type === "boss") {
+      g.fillStyle = "#ffd35e";
+      g.beginPath();
+      g.moveTo(-6.4, -5.4);
+      g.lineTo(-7.4, -11.6);
+      g.lineTo(-3.2, -7.6);
+      g.lineTo(0, -13);
+      g.lineTo(3.2, -7.6);
+      g.lineTo(7.4, -11.6);
+      g.lineTo(6.4, -5.4);
+      g.closePath();
+      g.fill();
+      g.fillStyle = "#b0242a";
+      circleIn(g, 0, -8.2, 1.3);
+    }
+
+    zombieHeadSpriteCache.set(key, c);
+    return c;
   }
 
   function drawZombie(zombie, t) {
@@ -4231,6 +5986,8 @@ const Game = (() => {
     const isBoss = zombie.type === "boss";
     const isMutant = zombie.type === "mutant";
     const isExploder = zombie.type === "exploder";
+    const isIce = zombie.type === "ice";
+    const isFire = zombie.type === "fire";
     const bodySize = zombie.radius / 17;
     const faceX = Math.cos(zombie.face);
     const faceY = Math.sin(zombie.face);
@@ -4251,35 +6008,34 @@ const Game = (() => {
     ctx.scale(scale, scale);
 
     if (isPoison) {
-      const aura = ctx.createRadialGradient(0, -2, 2, 0, -2, 27);
-      aura.addColorStop(0, "rgba(166, 244, 82, 0.17)");
-      aura.addColorStop(1, "rgba(92, 160, 40, 0)");
-      ctx.fillStyle = aura;
-      ctx.beginPath();
-      ctx.arc(0, -2, 27, 0, TAU);
-      ctx.fill();
+      const aura = getAuraSprite(
+        "poison",
+        "rgba(166, 244, 82, 0.17)",
+        "rgba(92, 160, 40, 0.08)"
+      );
+      ctx.drawImage(aura, -27, -29, 54, 54);
     }
 
     if (isBerserker && zombie.berserk) {
       const rage = 0.15 + 0.1 * Math.sin(t * 7);
-      const aura = ctx.createRadialGradient(0, -2, 2, 0, -2, 32 + rage * 8);
-      aura.addColorStop(0, "rgba(255, 60, 40, 0.4)");
-      aura.addColorStop(1, "rgba(130, 20, 20, 0)");
-      ctx.fillStyle = aura;
-      ctx.beginPath();
-      ctx.arc(0, -2, 32 + rage * 8, 0, TAU);
-      ctx.fill();
+      const auraR = 32 + rage * 8;
+      const aura = getAuraSprite(
+        "berserker",
+        "rgba(255, 60, 40, 0.4)",
+        "rgba(190, 32, 26, 0.18)"
+      );
+      ctx.drawImage(aura, -auraR, -2 - auraR, auraR * 2, auraR * 2);
     }
 
     if (isSummoner) {
       const pulse = 0.5 + 0.5 * Math.sin(t * 4);
-      const aura = ctx.createRadialGradient(0, 2, 2, 0, 2, 22 + pulse * 4);
-      aura.addColorStop(0, "rgba(216, 138, 255, 0.25)");
-      aura.addColorStop(1, "rgba(120, 60, 180, 0)");
-      ctx.fillStyle = aura;
-      ctx.beginPath();
-      ctx.arc(0, 2, 22 + pulse * 4, 0, TAU);
-      ctx.fill();
+      const auraR = 22 + pulse * 4;
+      const aura = getAuraSprite(
+        "summoner",
+        "rgba(216, 138, 255, 0.25)",
+        "rgba(120, 60, 180, 0.12)"
+      );
+      ctx.drawImage(aura, -auraR, 2 - auraR, auraR * 2, auraR * 2);
       ctx.strokeStyle = "rgba(216, 138, 255, 0.5)";
       ctx.lineWidth = 1.5;
       ctx.setLineDash([6, 6]);
@@ -4304,14 +6060,13 @@ const Game = (() => {
 
     if (isBoss) {
       const pulse = 0.5 + 0.5 * Math.sin(t * 3.2 + zombie.phase);
-      const aura = ctx.createRadialGradient(0, 0, 4, 0, 0, 44 + pulse * 8);
-      aura.addColorStop(0, "rgba(255, 82, 58, 0.34)");
-      aura.addColorStop(0.55, "rgba(180, 30, 24, 0.18)");
-      aura.addColorStop(1, "rgba(120, 12, 10, 0)");
-      ctx.fillStyle = aura;
-      ctx.beginPath();
-      ctx.arc(0, 0, 44 + pulse * 8, 0, TAU);
-      ctx.fill();
+      const auraR = 44 + pulse * 8;
+      const aura = getAuraSprite(
+        "boss",
+        "rgba(255, 82, 58, 0.34)",
+        "rgba(180, 30, 24, 0.18)"
+      );
+      ctx.drawImage(aura, -auraR, -auraR, auraR * 2, auraR * 2);
 
       ctx.strokeStyle = `rgba(255, 118, 82, ${0.26 + pulse * 0.18})`;
       ctx.lineWidth = 2;
@@ -4325,25 +6080,24 @@ const Game = (() => {
 
     if (isMutant) {
       const pulse = 0.5 + 0.5 * Math.sin(t * 4.4 + zombie.phase);
-      const aura = ctx.createRadialGradient(0, 0, 2, 0, 0, 27 + pulse * 5);
-      aura.addColorStop(0, "rgba(150, 255, 110, 0.24)");
-      aura.addColorStop(0.6, "rgba(90, 210, 80, 0.12)");
-      aura.addColorStop(1, "rgba(50, 140, 50, 0)");
-      ctx.fillStyle = aura;
-      ctx.beginPath();
-      ctx.arc(0, 0, 27 + pulse * 5, 0, TAU);
-      ctx.fill();
+      const auraR = 27 + pulse * 5;
+      const aura = getAuraSprite(
+        "mutant",
+        "rgba(150, 255, 110, 0.24)",
+        "rgba(90, 210, 80, 0.12)"
+      );
+      ctx.drawImage(aura, -auraR, -auraR, auraR * 2, auraR * 2);
     }
 
     if (isExploder) {
       const pulse = 0.5 + 0.5 * Math.sin(t * 7 + zombie.phase);
-      const aura = ctx.createRadialGradient(0, 0, 2, 0, 0, 23 + pulse * 4);
-      aura.addColorStop(0, `rgba(255, 168, 64, ${0.24 + pulse * 0.18})`);
-      aura.addColorStop(1, "rgba(220, 70, 20, 0)");
-      ctx.fillStyle = aura;
-      ctx.beginPath();
-      ctx.arc(0, 0, 23 + pulse * 4, 0, TAU);
-      ctx.fill();
+      const auraR = 23 + pulse * 4;
+      const aura = getAuraSprite(
+        "exploder",
+        "rgba(255, 168, 64, 0.38)",
+        "rgba(220, 70, 20, 0.16)"
+      );
+      ctx.drawImage(aura, -auraR, -auraR, auraR * 2, auraR * 2);
     }
 
     if (isBurrower && zombie.burrowState === "burrowed") {
@@ -4368,119 +6122,11 @@ const Game = (() => {
       }
     }
 
-    let bodyColor = "#2f5b3d";
-    let patchColor = "#24432e";
-    let armColor = "#4d7654";
-    let headColor = "#739d75";
-    let eyeColor = "#ffc06b";
-    let legColor = "#172a1c";
-    let clawColor = "#8fb98e";
-
-    if (isRunner) {
-      bodyColor = "#326b58";
-      patchColor = "#204a3d";
-      armColor = "#5c9a80";
-      headColor = "#8fc4a9";
-      eyeColor = "#d8ff9a";
-      legColor = "#153028";
-      clawColor = "#b6f0d6";
-    } else if (isWarrior) {
-      bodyColor = "#465341";
-      patchColor = "#2c382b";
-      armColor = "#6d7a63";
-      headColor = "#93a184";
-      eyeColor = "#ff7b5e";
-      legColor = "#1c241c";
-      clawColor = "#b8c4ab";
-    } else if (isPoison) {
-      bodyColor = "#4c5f2b";
-      patchColor = "#37471f";
-      armColor = "#789347";
-      headColor = "#9db064";
-      eyeColor = "#c9ff66";
-      legColor = "#23301a";
-      clawColor = "#c2e87e";
-    } else if (isArcher) {
-      bodyColor = "#5d4a3a";
-      patchColor = "#3e2f26";
-      armColor = "#8b6f60";
-      headColor = "#a88b7a";
-      eyeColor = "#ffd58a";
-      legColor = "#2b1d18";
-      clawColor = "#e3c282";
-    } else if (isSpear) {
-      bodyColor = "#5a453a";
-      patchColor = "#3c2c24";
-      armColor = "#7d6555";
-      headColor = "#9a7e6e";
-      eyeColor = "#ffa372";
-      legColor = "#271814";
-      clawColor = "#c9a23c";
-    } else if (isShield) {
-      bodyColor = "#44544c";
-      patchColor = "#2d3d34";
-      armColor = "#6a806e";
-      headColor = "#8aa094";
-      eyeColor = "#8fd8c8";
-      legColor = "#1f2b24";
-      clawColor = "#78b39d";
-    } else if (isCrawler) {
-      bodyColor = "#3d3d3d";
-      patchColor = "#2a2a2a";
-      armColor = "#5a5a5a";
-      headColor = "#7a7a7a";
-      eyeColor = "#ff5a5a";
-      legColor = "#1a1a1a";
-      clawColor = "#c9a23c";
-    } else if (isSummoner) {
-      bodyColor = "#4a3d4a";
-      patchColor = "#2d252d";
-      armColor = "#6a5a6a";
-      headColor = "#8a7a8a";
-      eyeColor = "#d88aff";
-      legColor = "#1a141a";
-      clawColor = "#c9a23c";
-    } else if (isBurrower) {
-      bodyColor = "#4a443a";
-      patchColor = "#2d2a20";
-      armColor = "#6a6252";
-      headColor = "#8a806a";
-      eyeColor = "#d8c88a";
-      legColor = "#1a1814";
-      clawColor = "#c9b36a";
-    } else if (isHowler) {
-      bodyColor = "#4a3a4a";
-      patchColor = "#2d252d";
-      armColor = "#6a5a6a";
-      headColor = "#8a7a8a";
-      eyeColor = "#ff6a8a";
-      legColor = "#1a141a";
-      clawColor = "#ff8aa2";
-    } else if (isBoss) {
-      bodyColor = "#5c2f28";
-      patchColor = "#3c1c18";
-      armColor = "#8a4a3e";
-      headColor = "#a76a58";
-      eyeColor = "#ffdc6a";
-      legColor = "#2a1210";
-      clawColor = "#e0b36a";
-    } else if (isMutant) {
-      bodyColor = "#405f34";
-      patchColor = "#2c4526";
-      armColor = "#6d8f4e";
-      headColor = "#9ab86a";
-      eyeColor = "#c8ff62";
-      legColor = "#20301c";
-      clawColor = "#d2f08a";
-    } else if (isExploder) {
-      bodyColor = "#5d4436";
-      patchColor = "#402c22";
-      armColor = "#8a6448";
-      headColor = "#a3805e";
-      eyeColor = "#ff9a4a";
-      legColor = "#2b1c14";
-      clawColor = "#ffc27a";
-    }
+    const palette = ZOMBIE_PALETTES[zombie.type] || ZOMBIE_PALETTES.normal;
+    const armColor = palette.arm;
+    const eyeColor = palette.eye;
+    const legColor = palette.leg;
+    const clawColor = palette.claw;
 
     ctx.strokeStyle = legColor;
     ctx.lineWidth = 4;
@@ -4507,19 +6153,8 @@ const Game = (() => {
     ctx.save();
     ctx.translate(lean, 0);
 
-    ctx.fillStyle = flash > 0.2 ? "#e6ffe9" : bodyColor;
-    ctx.beginPath();
-    ctx.ellipse(0, isCrawler ? -0.4 : 1, isCrawler ? 11 : 8.6, isCrawler ? 6 : 11.2, 0, 0, TAU);
-    ctx.fill();
-
-    ctx.fillStyle = flash > 0.2 ? "#a9d7b1" : patchColor;
-    ctx.beginPath();
-    ctx.moveTo(-8, -2);
-    ctx.lineTo(8, -3);
-    ctx.lineTo(6.5, 7);
-    ctx.lineTo(-6.5, 6);
-    ctx.closePath();
-    ctx.fill();
+    // Thân zombie đã bake sẵn thành sprite (1 drawImage thay cho nhiều path)
+    ctx.drawImage(getZombieBodySprite(zombie.type, flash > 0.2), -32, -32, 64, 64);
 
     // Hiệu ứng đóng băng khi bị băng giá
     if (zombie.freezeTimer > 0) {
@@ -4542,71 +6177,8 @@ const Game = (() => {
       ctx.restore();
     }
 
-    if (isWarrior) {
-      ctx.fillStyle = flash > 0.2 ? "#d8e0d2" : "#5c665a";
-      circleIn(ctx, -7.4, -4.2, 3.8);
-      circleIn(ctx, 7.4, -4.2, 3.8);
-      ctx.fillStyle = "#39443a";
-      circleIn(ctx, -7.4, -4.2, 1.4);
-      circleIn(ctx, 7.4, -4.2, 1.4);
-      ctx.strokeStyle = "rgba(190, 200, 180, 0.35)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(-5, 0);
-      ctx.lineTo(5, 0);
-      ctx.stroke();
-    }
-
-    if (isRunner) {
-      ctx.strokeStyle = "rgba(150, 230, 195, 0.28)";
-      ctx.lineWidth = 1.2;
-      for (let i = 0; i < 2; i += 1) {
-        ctx.beginPath();
-        ctx.moveTo(-13 - i * 3, 4 + i * 4);
-        ctx.lineTo(-22 - i * 4, 8 + i * 4);
-        ctx.stroke();
-      }
-    }
-
-    if (isPoison) {
-      ctx.fillStyle = "rgba(198, 255, 110, 0.4)";
-      circleIn(ctx, -4.4, -3.2, 1.3);
-      circleIn(ctx, 3.8, 2.4, 1);
-      circleIn(ctx, -1.6, 5.4, 0.9);
-      ctx.strokeStyle = "rgba(202, 255, 126, 0.35)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(0, 1, 6.2, Math.PI * 0.18, Math.PI * 0.82);
-      ctx.stroke();
-    }
-
-    if (isMutant) {
-      const pulse = 0.5 + 0.5 * Math.sin(t * 5 + zombie.phase);
-      ctx.fillStyle = `rgba(176, 255, 116, ${0.34 + pulse * 0.26})`;
-      circleIn(ctx, -4.6, -3.6, 1.8);
-      circleIn(ctx, 4.2, 1.6, 2.2);
-      circleIn(ctx, -1.4, 5.8, 1.4);
-      circleIn(ctx, 5.8, -5.2, 1.3);
-      ctx.strokeStyle = "rgba(132, 220, 92, 0.42)";
-      ctx.lineWidth = 1.1;
-      ctx.beginPath();
-      ctx.moveTo(-6.6, 0.5);
-      ctx.quadraticCurveTo(-2, 3.4, 2.6, 0.9);
-      ctx.stroke();
-    }
-
     if (isExploder) {
       const pulse = 0.5 + 0.5 * Math.sin(t * 7.5 + zombie.phase);
-      ctx.strokeStyle = `rgba(255, 154, 62, ${0.4 + pulse * 0.35})`;
-      ctx.lineWidth = 1.4;
-      ctx.beginPath();
-      ctx.moveTo(-6.8, -3.4);
-      ctx.lineTo(-2.4, -1);
-      ctx.lineTo(-4.2, 2.8);
-      ctx.moveTo(3.2, -4.6);
-      ctx.lineTo(5.8, -0.6);
-      ctx.lineTo(2.4, 2.6);
-      ctx.stroke();
       ctx.fillStyle = `rgba(255, 198, 102, ${0.5 + pulse * 0.4})`;
       ctx.beginPath();
       ctx.arc(0.6, 0.8, 3.4 + pulse * 1.2, 0, TAU);
@@ -4615,29 +6187,6 @@ const Game = (() => {
       ctx.beginPath();
       ctx.arc(0.6, 0.8, 1.4, 0, TAU);
       ctx.fill();
-    }
-
-    if (isBoss) {
-      ctx.fillStyle = flash > 0.2 ? "#f0d8c4" : "#3f201b";
-      ctx.beginPath();
-      ctx.moveTo(-9, -6);
-      ctx.lineTo(-4, -2);
-      ctx.lineTo(0, -6.5);
-      ctx.lineTo(4, -2);
-      ctx.lineTo(9, -6);
-      ctx.lineTo(7, 5);
-      ctx.lineTo(0, 8);
-      ctx.lineTo(-7, 5);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = "rgba(255, 198, 120, 0.55)";
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.moveTo(-5.4, 1.2);
-      ctx.lineTo(5.4, 1.2);
-      ctx.moveTo(-3.6, 4);
-      ctx.lineTo(3.6, 4);
-      ctx.stroke();
     }
 
     const armSwing = Math.sin(t * 5.2 + zombie.phase + 1.2) * 1.6;
@@ -4724,91 +6273,42 @@ const Game = (() => {
     const headX = lean * 0.4 + faceX * 1.1;
     const headY = -13 + faceY * 0.7;
 
-    ctx.fillStyle = flash > 0.2 ? "#e6ffe9" : headColor;
-    ctx.beginPath();
-    ctx.arc(headX, headY, 6.5, 0, TAU);
-    ctx.fill();
+    // Đầu zombie đã bake sẵn thành sprite (1 drawImage thay cho nhiều path)
+    ctx.drawImage(
+      getZombieHeadSprite(zombie.type, flash > 0.2),
+      headX - 24,
+      headY - 24,
+      48,
+      48
+    );
 
-    if (isWarrior) {
-      ctx.strokeStyle = "#8a9382";
-      ctx.lineWidth = 2.4;
-      ctx.beginPath();
-      ctx.arc(headX, headY, 7.2, Math.PI * 0.98, Math.PI * 2.02);
-      ctx.stroke();
-      ctx.fillStyle = "#aab39f";
-      ctx.beginPath();
-      ctx.moveTo(headX, headY - 10.4);
-      ctx.lineTo(headX + 2.6, headY - 6);
-      ctx.lineTo(headX - 2.6, headY - 6);
-      ctx.closePath();
-      ctx.fill();
-    } else if (isRunner) {
-      ctx.strokeStyle = "rgba(110, 190, 160, 0.5)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(headX, headY, 7.1, Math.PI * 0.9, Math.PI * 2.1);
-      ctx.stroke();
-    } else if (isPoison) {
-      ctx.fillStyle = "rgba(202, 255, 112, 0.55)";
-      circleIn(ctx, headX - 5.6, headY - 4.4, 1.1);
-      circleIn(ctx, headX + 5.2, headY - 5.2, 0.8);
-      circleIn(ctx, headX + 4.6, headY - 7.6, 0.6);
-    } else if (isMutant) {
-      ctx.fillStyle = "#2a2a20";
-      ctx.beginPath();
-      ctx.moveTo(headX - 6.2, headY - 3.4);
-      ctx.lineTo(headX - 8.8, headY - 9.4);
-      ctx.lineTo(headX - 4.4, headY - 5.8);
-      ctx.closePath();
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(headX + 6.2, headY - 3.4);
-      ctx.lineTo(headX + 8.8, headY - 9.4);
-      ctx.lineTo(headX + 4.4, headY - 5.8);
-      ctx.closePath();
-      ctx.fill();
-    } else if (isExploder) {
+    if (isExploder) {
       const pulse = 0.5 + 0.5 * Math.sin(t * 8 + zombie.phase);
       ctx.fillStyle = `rgba(255, 196, 92, ${0.55 + pulse * 0.35})`;
       circleIn(ctx, headX - 4.8, headY - 4.2, 1.2);
       circleIn(ctx, headX + 4.4, headY - 4.8, 0.9);
-    } else if (isBoss) {
-      ctx.fillStyle = "#ffd35e";
-      ctx.beginPath();
-      ctx.moveTo(headX - 6.4, headY - 5.4);
-      ctx.lineTo(headX - 7.4, headY - 11.6);
-      ctx.lineTo(headX - 3.2, headY - 7.6);
-      ctx.lineTo(headX, headY - 13);
-      ctx.lineTo(headX + 3.2, headY - 7.6);
-      ctx.lineTo(headX + 7.4, headY - 11.6);
-      ctx.lineTo(headX + 6.4, headY - 5.4);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#b0242a";
-      circleIn(ctx, headX, headY - 8.2, 1.3);
     }
 
     if (!away) {
       const eyeOffsetX = faceX * 0.8;
       const eyeY = headY - 0.4 + faceY * 0.4;
-      ctx.shadowColor = isWarrior
-        ? "rgba(255, 96, 72, 0.95)"
-        : isPoison || isMutant
-          ? "rgba(190, 255, 90, 0.95)"
-          : isBoss
-            ? "rgba(255, 210, 90, 0.95)"
-            : isExploder
-              ? "rgba(255, 150, 60, 0.95)"
-              : "rgba(255, 176, 84, 0.95)";
-      ctx.shadowBlur = 8;
+      const singleEye = Math.abs(faceX) > 0.65;
+      const eye1X = singleEye
+        ? headX + eyeOffsetX + (faceX > 0 ? 0.9 : -0.9)
+        : headX - 2.4 + eyeOffsetX;
+      const eye2X = headX + 2.4 + eyeOffsetX;
+
+      // Quầng mắt nhẹ (thay shadowBlur để giảm tải khi đông zombie)
+      ctx.save();
+      ctx.globalAlpha = spawn * 0.25;
       ctx.fillStyle = eyeColor;
-      if (Math.abs(faceX) > 0.65) {
-        circleIn(ctx, headX + eyeOffsetX + (faceX > 0 ? 0.9 : -0.9), eyeY, 1.5);
-      } else {
-        circleIn(ctx, headX - 2.4 + eyeOffsetX, eyeY, 1.5);
-        circleIn(ctx, headX + 2.4 + eyeOffsetX, eyeY, 1.5);
-      }
-      ctx.shadowBlur = 0;
+      circleIn(ctx, eye1X, eyeY, singleEye ? 3.4 : 3);
+      if (!singleEye) circleIn(ctx, eye2X, eyeY, 3);
+      ctx.restore();
+
+      ctx.fillStyle = eyeColor;
+      circleIn(ctx, eye1X, eyeY, 1.5);
+      if (!singleEye) circleIn(ctx, eye2X, eyeY, 1.5);
 
       ctx.strokeStyle = "rgba(28, 18, 12, 0.85)";
       ctx.lineWidth = 1;
@@ -4842,55 +6342,26 @@ const Game = (() => {
       ctx.scale(bz, bz);
       ctx.globalCompositeOperation = "lighter";
 
-      // Quầng lửa dưới chân
-      const groundGlow = ctx.createRadialGradient(0, 9, 2, 0, 9, 26);
-      groundGlow.addColorStop(0, `rgba(255, 128, 36, ${0.28 * flicker})`);
-      groundGlow.addColorStop(1, "rgba(255, 60, 0, 0)");
-      ctx.fillStyle = groundGlow;
-      ctx.beginPath();
-      ctx.ellipse(0, 9, 26, 11, 0, 0, TAU);
-      ctx.fill();
-
-      // Các lưỡi lửa bốc lên từ thân
-      const flames = [
-        { x: -8, base: 2, sway: 2.8, h: 15 },
-        { x: 0, base: 0, sway: 3.6, h: 22 },
-        { x: 8, base: 2, sway: 2.4, h: 14 },
-        { x: -3, base: 4, sway: 3.1, h: 18 },
-        { x: 4, base: 5, sway: 2.6, h: 12 },
-      ];
-
-      for (let f = 0; f < flames.length; f += 1) {
-        const flame = flames[f];
-        const phase = t * (6.5 + f * 0.7) + zombie.phase + f * 1.7;
-        const sway = Math.sin(phase) * flame.sway;
-        const height = flame.h * (0.72 + 0.34 * Math.sin(phase * 1.35));
-        const tipX = flame.x + sway;
-        const tipY = flame.base - height;
-
-        const grad = ctx.createLinearGradient(flame.x, flame.base, tipX, tipY);
-        grad.addColorStop(0, `rgba(255, 238, 150, ${0.82 * flicker})`);
-        grad.addColorStop(0.35, `rgba(255, 142, 40, ${0.72 * flicker})`);
-        grad.addColorStop(0.78, `rgba(214, 46, 8, ${0.36 * flicker})`);
-        grad.addColorStop(1, "rgba(160, 20, 0, 0)");
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.moveTo(flame.x - 4.2, flame.base);
-        ctx.quadraticCurveTo(flame.x - 5.5 + sway * 0.4, flame.base - height * 0.55, tipX, tipY);
-        ctx.quadraticCurveTo(flame.x + 5.5 + sway * 0.4, flame.base - height * 0.5, flame.x + 4.2, flame.base);
-        ctx.closePath();
-        ctx.fill();
-      }
+      // Cụm lửa + quầng sáng đã bake sẵn (1 sprite thay vì 6 hình)
+      const overlays = ensureFxSprites().burnOverlay;
+      const variant = Math.sin(t * 5 + zombie.phase) > 0 ? 0 : 1;
+      ctx.globalAlpha = 0.85 * flicker;
+      ctx.drawImage(overlays[variant], -32, -54, 64, 64);
 
       // Tàn lửa bay lên
-      for (let e = 0; e < 4; e += 1) {
+      for (let e = 0; e < 2; e += 1) {
         const rise = (t * (34 + e * 7) + e * 23 + zombie.phase * 9) % 46;
         const ex = Math.sin(t * 6 + e * 2.2 + zombie.phase) * (7 + e * 1.6);
         const ey = 4 - rise;
-        ctx.fillStyle = `rgba(255, ${150 + e * 18}, 76, ${(1 - rise / 46) * 0.75})`;
-        ctx.beginPath();
-        ctx.arc(ex, ey, 1.2, 0, TAU);
-        ctx.fill();
+        const s = 1.9;
+        ctx.globalAlpha = (1 - rise / 46) * 0.65;
+        ctx.drawImage(
+          getToneSprite(`255, ${150 + e * 18}, 76`),
+          ex - s,
+          ey - s,
+          s * 2,
+          s * 2
+        );
       }
 
       ctx.restore();
@@ -4912,7 +6383,11 @@ const Game = (() => {
             ? "#b7ff6a"
             : zombie.type === "exploder"
               ? "#ff9a4a"
-              : "#79e29c";
+              : zombie.type === "ice"
+                ? "#8ecff0"
+                : zombie.type === "fire"
+                  ? "#ffaa66"
+                  : "#79e29c";
       ctx.fillRect(zombie.x - width / 2, barY, width * ratio, 3.4);
       ctx.restore();
     }
@@ -4923,7 +6398,8 @@ const Game = (() => {
     const pulse = 0.5 + 0.5 * Math.sin(t * 3 + gem.phase);
     const pop = Math.min(1, gem.life * 5);
     const isRed = gem.kind === "red";
-    const glow = isRed ? glowRed : glowGreen;
+    const isGold = gem.kind === "gold";
+    const glow = isRed ? glowRed : isGold ? glowGold : glowGreen;
 
     ctx.save();
     ctx.globalAlpha = pop;
@@ -4938,43 +6414,15 @@ const Game = (() => {
 
     ctx.rotate(Math.sin(t * 1.4 + gem.phase) * 0.12);
     if (isRed) ctx.scale(1.16, 1.16);
-    const grad = ctx.createLinearGradient(-7, -8, 7, 8);
-    if (isRed) {
-      grad.addColorStop(0, "#fff2e6");
-      grad.addColorStop(0.4, "#ff8a6f");
-      grad.addColorStop(1, "#b0242a");
-    } else {
-      grad.addColorStop(0, "#efffe9");
-      grad.addColorStop(0.4, "#7df0a8");
-      grad.addColorStop(1, "#1f9a58");
-    }
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(0, -9);
-    ctx.lineTo(6.4, -2);
-    ctx.lineTo(3.8, 8);
-    ctx.lineTo(-3.8, 8);
-    ctx.lineTo(-6.4, -2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = isRed
-      ? "rgba(255, 224, 210, 0.85)"
-      : "rgba(224, 255, 232, 0.75)";
-    ctx.lineWidth = 0.8;
-    ctx.stroke();
-
-    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-    ctx.beginPath();
-    ctx.moveTo(-2, -5.5);
-    ctx.lineTo(2.4, -2.8);
-    ctx.lineTo(-0.6, 0.2);
-    ctx.lineTo(-4.4, -2.5);
-    ctx.closePath();
-    ctx.fill();
+    if (isGold) ctx.scale(1.22, 1.22);
+    const sprites = ensureFxSprites();
+    const sprite = isRed ? sprites.gems.red : isGold ? sprites.gems.gold : sprites.gems.green;
+    ctx.drawImage(sprite, -10, -10.4, 20, 20);
     ctx.restore();
   }
 
   function drawDart(dart) {
+    if (!inView(dart.x, dart.y, 60)) return;
     const fade = clamp((dart.range - dart.traveled) / 70, 0, 1);
     ctx.save();
     ctx.globalAlpha = 0.25 + fade * 0.75;
@@ -5493,10 +6941,10 @@ const Game = (() => {
       ctx.stroke();
     }
 
-    // Enhanced shield visual when below 50% HP
-    if (state.skills.enhancedShield > 0 && state.hp < state.maxHp * 0.5) {
-      const pulse = 0.5 + 0.5 * Math.sin(t * 6);
-      const shieldAlpha = 0.3 + pulse * 0.2;
+    // Khiên hiệu ứng khi dưới 50% HP (tối ưu: vẽ ít layer, bỏ loop đoạn)
+    if ((state.skills.energyShield > 0 || state.skills.enhancedShield > 0) && state.hp < state.maxHp * 0.5) {
+      const pulse = 0.5 + 0.5 * Math.sin(t * 5);
+      const shieldAlpha = 0.25 + pulse * 0.15;
 
       ctx.save();
       ctx.globalAlpha = shieldAlpha;
@@ -5506,20 +6954,10 @@ const Game = (() => {
       ctx.arc(0, 0, 16, 0, TAU);
       ctx.stroke();
 
-      ctx.fillStyle = "rgba(0, 170, 255, 0.1)";
+      ctx.fillStyle = "rgba(0, 170, 255, 0.08)";
       ctx.beginPath();
       ctx.arc(0, 0, 16, 0, TAU);
       ctx.fill();
-
-      // Shield segments
-      ctx.lineWidth = 1.5;
-      for (let i = 0; i < 6; i++) {
-        const angle = (i / 6) * Math.PI * 2 + t * 0.5;
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(angle) * 14, Math.sin(angle) * 14);
-        ctx.lineTo(Math.cos(angle) * 18, Math.sin(angle) * 18);
-        ctx.stroke();
-      }
       ctx.restore();
     }
 
@@ -5606,6 +7044,7 @@ const Game = (() => {
   window.addEventListener("blur", () => {
     state.keys.clear();
     state.pointer.active = false;
+    resetJoystick();
   });
 
   document.addEventListener("visibilitychange", () => {
@@ -5763,6 +7202,7 @@ const Game = (() => {
     state.timerText = "";
     state.keys.clear();
     state.pointer.active = false;
+    resetJoystick();
     state.hp = state.character.hp + state.upgrades.hp * 10;
     state.maxHp = state.hp;
     state.armor = state.character.armor;
@@ -5776,6 +7216,7 @@ const Game = (() => {
     state.gems = [];
     state.poisonZones = [];
     state.fireZones = [];
+    state.iceZones = [];
     state.bombs = [];
     state.slashes = [];
     state.zombieProjectiles = [];
@@ -5790,6 +7231,7 @@ const Game = (() => {
     state.totalSpawned = 0;
     state.bossCount = 0;
     state.levelUps = 0;
+    state.bossSummonTimer = 0;
     state.wave = 1;
     state.waveState = "fight";
     state.waveTimer = 0;
@@ -5802,7 +7244,27 @@ const Game = (() => {
     state.damageTimer = 999;
     state.firebombTimer = 0;
     state.meteorTimer = 0;
+    state.mineTimer = 0;
+    state.mines = [];
+    state.blackHoleTimer = 0;
+    state.blackHoles = [];
+    state.chainBolts = [];
+    state.xRayLaserTimer = 0;
+    state.xRayBeam = null;
+    state.xRayBeams = [];
+    state.parallelUniverseTimer = 0;
+    state.parallelUniverseActive = false;
+    state.fireRateTimer = 0;
     state.sawAngle = 0;
+    state.fireOrbAngle = 0;
+    state.nearestTarget = null;
+    state.extendedDurationBonus = 0;
+    state.skyMissileTimer = 0;
+    state.skyMissiles = [];
+    state.resistanceBonus = 0;
+    state.tornadoFx = 0;
+    state.playerBurnTimer = 0;
+    state.playerBurnDps = 0;
     state.remainingDisplay = -1;
     state.lightningTimer = 0;
     state.lightningStrikes = [];
@@ -5848,6 +7310,7 @@ const Game = (() => {
     state.victory = false;
     state.keys.clear();
     state.pointer.active = false;
+    resetJoystick();
 
     if (state.raf) {
       window.cancelAnimationFrame(state.raf);
@@ -5881,6 +7344,7 @@ const Game = (() => {
     if (els.pauseLayer) els.pauseLayer.hidden = !next;
     state.keys.clear();
     state.pointer.active = false;
+    resetJoystick();
 
     if (next) {
       if (els.resumeBtn) els.resumeBtn.focus({ preventScroll: true });
@@ -5897,9 +7361,33 @@ const Game = (() => {
     }
   }
 
+  function setJoystickVector(x, y) {
+    let nx = Number(x) || 0;
+    let ny = Number(y) || 0;
+    const mag = Math.hypot(nx, ny);
+    if (mag > 1) {
+      nx /= mag;
+      ny /= mag;
+    }
+    nx = Math.max(-1, Math.min(1, nx));
+    ny = Math.max(-1, Math.min(1, ny));
+    state.joystick.x = nx;
+    state.joystick.y = ny;
+    state.joystick.active = Math.hypot(nx, ny) > 0.05;
+  }
+
+  function resetJoystick() {
+    state.joystick.x = 0;
+    state.joystick.y = 0;
+    state.joystick.active = false;
+  }
+
   const api = {
     start,
     stop,
+    setMoveVector(x, y) {
+      setJoystickVector(x, y);
+    },
     triggerManualShoot() {
       state.pointerShoot = true;
     },
@@ -5938,8 +7426,13 @@ const Game = (() => {
         levelUps: state.levelUps,
         elapsed: state.elapsed,
         autoAttack: state.autoAttack,
+        pointerShoot: state.pointerShoot,
+        shootCooldown: state.shootCooldown,
+        joystick: { x: state.joystick.x, y: state.joystick.y, active: state.joystick.active },
         revives: state.revives,
         upgrades: { ...state.upgrades },
+        playerBurnTimer: state.playerBurnTimer,
+        playerBurnDps: state.playerBurnDps,
         speedMult: state.speedMult,
         healingTimer: state.healingTimer,
         meteorTimer: state.meteorTimer,
@@ -5972,6 +7465,7 @@ const Game = (() => {
           howlDamageMult: zombie.howlDamageMult,
           burnTimer: zombie.burnTimer,
           burnDamage: zombie.burnDamage,
+          iceZoneTimer: zombie.iceZoneTimer,
         })),
         poisonZones: state.poisonZones.map((zone) => ({
           x: zone.x,
@@ -5987,6 +7481,13 @@ const Game = (() => {
           ttl: zone.ttl,
           radius: zone.radius,
           dps: zone.dps,
+        })),
+        iceZones: state.iceZones.map((zone) => ({
+          x: zone.x,
+          y: zone.y,
+          life: zone.life,
+          ttl: zone.ttl,
+          radius: zone.radius,
         })),
         bombs: state.bombs.map((bomb) => ({
           x: bomb.x,
@@ -6019,6 +7520,31 @@ const Game = (() => {
           damage: mine.damage,
           radius: mine.radius,
           armed: mine.armed,
+        })),
+        blackHoleTimer: state.blackHoleTimer,
+        blackHoles: state.blackHoles.map((hole) => ({
+          x: hole.x,
+          y: hole.y,
+          life: hole.life,
+          ttl: hole.ttl,
+          dps: hole.dps,
+          radius: hole.radius,
+        })),
+        chainBolts: state.chainBolts.map((bolt) => ({
+          x1: bolt.x1,
+          y1: bolt.y1,
+          x2: bolt.x2,
+          y2: bolt.y2,
+          life: bolt.life,
+          ttl: bolt.ttl,
+        })),
+        xRayBeams: state.xRayBeams.map((beam) => ({
+          x: beam.x,
+          y: beam.y,
+          angle: beam.angle,
+          range: beam.range,
+          life: beam.life,
+          ttl: beam.ttl,
         })),
         parallelUniverseTimer: state.parallelUniverseTimer,
         parallelUniverseActive: state.parallelUniverseActive,
@@ -6121,6 +7647,13 @@ const Game = (() => {
       writeSnapshot();
     };
 
+    // Debug/benchmark: hồi đầy HP cho toàn bộ zombie (không ghi snapshot để tránh nhiễu đo FPS)
+    const healZombies = () => {
+      for (const zombie of state.zombies) {
+        if (!zombie.dead) zombie.hp = zombie.maxHp;
+      }
+    };
+
     const setEnergyMax = (value) => {
       state.energyMax = clamp(Math.floor(Number(value) || ENERGY_START), ENERGY_START, ENERGY_CAP);
       state.energy = Math.min(state.energy, state.energyMax);
@@ -6132,7 +7665,12 @@ const Game = (() => {
       const detail = payload && typeof payload === "object" ? payload : { id: payload, level: 1 };
       const definition = SKILLS.find((skill) => skill.id === detail.id);
       if (!definition) return;
-      const level = clamp(Math.floor(Number(detail.level) || 1), 0, definition.max);
+      const rawLevel = Number(detail.level);
+      const level = clamp(
+        Math.floor(Number.isFinite(rawLevel) ? rawLevel : 1),
+        0,
+        definition.max
+      );
       state.skills[definition.id] = level;
 
       if (definition.id === "health") {
@@ -6198,6 +7736,7 @@ const Game = (() => {
       setEnergy,
       setArmor,
       setHp,
+      healZombies,
       setEnergyMax,
       setSkill,
       setDoctorTimer,

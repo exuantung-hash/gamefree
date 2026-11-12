@@ -60,6 +60,7 @@ button {
   width: 100%;
   height: 100%;
   display: block;
+  z-index: 0;
   background: #07110c;
 }
 
@@ -2957,83 +2958,141 @@ body.is-playing .sound-toggle {
   }
 }
 
-/* ---------- Mobile controls ---------- */
+/* ---------- Mobile controls: virtual joystick 360° ---------- */
 .mobile-controls {
   position: absolute;
-  bottom: 1rem;
   left: 0;
   right: 0;
-  display: flex;
+  bottom: 0;
+  z-index: 6;
+  display: none;
+  align-items: flex-end;
   justify-content: space-between;
-  padding: 0 1rem;
   gap: 1rem;
+  padding: 0 1.15rem calc(1rem + env(safe-area-inset-bottom, 0px));
   pointer-events: none;
 }
 
-.mobile-controls button {
+.joystick {
+  width: 136px;
+  height: 136px;
+  pointer-events: none;
+}
+
+.joystick__base {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid rgba(232, 197, 71, 0.34);
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.12), rgba(8, 14, 9, 0.5) 68%),
+    rgba(6, 12, 8, 0.35);
+  box-shadow:
+    inset 0 0 26px rgba(0, 0, 0, 0.5),
+    0 0 18px rgba(232, 197, 71, 0.12);
   pointer-events: auto;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(232, 197, 71, 0.3);
-  color: #fff;
-  border-radius: 12px;
-  font-size: 1.2rem;
-  font-weight: 700;
-  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.mobile-controls button:active {
-  background: rgba(232, 197, 71, 0.4);
-  border-color: #e8c547;
+.joystick.is-active .joystick__base {
+  border-color: rgba(232, 197, 71, 0.8);
+  box-shadow:
+    inset 0 0 26px rgba(0, 0, 0, 0.5),
+    0 0 28px rgba(232, 197, 71, 0.32);
 }
 
-.dpad {
-  display: grid;
-  grid-template-areas:
-    ". up ."
-    "left down right";
-  gap: 0.5rem;
+.joystick__knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255, 240, 180, 0.9);
+  background: radial-gradient(circle at 34% 28%, #fff6ce, #e8c547 46%, #8a6a16 100%);
+  box-shadow:
+    0 5px 14px rgba(0, 0, 0, 0.5),
+    0 0 18px rgba(232, 197, 71, 0.35);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.joystick__hint {
+  position: absolute;
+  color: rgba(244, 226, 160, 0.4);
+  font-size: 0.68rem;
+  line-height: 1;
   pointer-events: none;
 }
 
-.dpad__btn {
-  pointer-events: auto;
-  width: 56px;
-  height: 56px;
-  font-size: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
+.joystick__hint--up {
+  top: 9px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
-.dpad__up { grid-area: up; }
-.dpad__down { grid-area: down; }
-.dpad__left { grid-area: left; }
-.dpad__right { grid-area: right; }
+.joystick__hint--down {
+  bottom: 9px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.joystick__hint--left {
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.joystick__hint--right {
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
 
 .shoot-btn {
-  width: 72px;
-  height: 72px;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
-  font-size: 0.95rem;
-  background: rgba(232, 197, 71, 0.2);
-  border-color: #e8c547;
-  color: #e8c547;
-  box-shadow: 0 0 20px rgba(232, 197, 71, 0.2);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-family: inherit;
+  color: #f4e2a0;
+  background: radial-gradient(circle at 35% 30%, rgba(232, 197, 71, 0.36), rgba(40, 34, 10, 0.6));
+  border: 2px solid rgba(232, 197, 71, 0.8);
+  box-shadow: 0 0 20px rgba(232, 197, 71, 0.22), inset 0 0 16px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.1s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
-.shoot-btn:active {
-  background: rgba(232, 197, 71, 0.5);
-  box-shadow: 0 0 30px rgba(232, 197, 71, 0.5);
+.shoot-btn:active,
+.shoot-btn.is-pressed {
+  transform: scale(0.94);
+  background: radial-gradient(circle at 35% 30%, rgba(255, 236, 150, 0.7), rgba(120, 94, 20, 0.8));
+  box-shadow: 0 0 32px rgba(232, 197, 71, 0.5);
 }
 
-/* Only show mobile controls on touch devices */
-@media (pointer: coarse) and (max-width: 900px) {
-  .mobile-controls {
+/* Joystick chỉ xuất hiện trên thiết bị cảm ứng (điện thoại/tablet), PC không có */
+@media (pointer: coarse) {
+  body.is-playing .mobile-controls {
     display: flex;
+  }
+
+  /* Tránh nút âm thanh đè lên nút Bắn trên điện thoại */
+  body.is-playing .sound-toggle {
+    display: none;
+  }
+
+  .skill-toast {
+    bottom: calc(1rem + 156px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -3042,4 +3101,37 @@ body.is-playing .sound-toggle {
     display: none !important;
   }
 }
+
+/* Thu gọn joystick khi chơi ngang (landscape) hoặc màn hình thấp */
+@media (pointer: coarse) and (orientation: landscape), (pointer: coarse) and (max-height: 520px) {
+  .mobile-controls {
+    padding: 0 0.8rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .joystick {
+    width: 116px;
+    height: 116px;
+  }
+
+  .joystick__knob {
+    width: 50px;
+    height: 50px;
+  }
+
+  .joystick__hint {
+    font-size: 0.58rem;
+  }
+
+  .shoot-btn {
+    width: 70px;
+    height: 70px;
+    font-size: 0.9rem;
+  }
+
+  .skill-toast {
+    bottom: calc(0.55rem + 136px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+
 

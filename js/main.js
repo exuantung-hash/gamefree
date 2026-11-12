@@ -803,36 +803,107 @@
 
     document.addEventListener("fullscreenchange", syncFullscreen);
 
-    // ---------- Mobile controls ----------
-    const dpadBtns = $(".dpad__btn");
+    // ---------- Mobile controls: joystick 360° ----------
+    const joystick = $("#joystick");
+    const joystickBase = $("#joystick-base");
+    const joystickKnob = $("#joystick-knob");
     const shootBtn = $("#mobile-shoot");
+    let joystickPointerId = null;
 
-    if (dpadBtns.length) {
-      dpadBtns.forEach((btn) => {
-        const key = btn.dataset.key;
-        const start = () => {
-          if (!key) return;
-          document.dispatchEvent(new KeyboardEvent("keydown", { key, code: key }));
-        };
-        const end = () => {
-          if (!key) return;
-          document.dispatchEvent(new KeyboardEvent("keyup", { key, code: key }));
-        };
-        btn.addEventListener("touchstart", (e) => { e.preventDefault(); start(); }, { passive: false });
-        btn.addEventListener("touchend", (e) => { e.preventDefault(); end(); }, { passive: false });
-        btn.addEventListener("touchcancel", end);
-        btn.addEventListener("pointerdown", (e) => { e.preventDefault(); start(); }, { passive: false });
-        btn.addEventListener("pointerup", end);
-        btn.addEventListener("pointercancel", end);
-      });
+    const setMoveVector = (x, y) => {
+      if (window.Game && typeof window.Game.setMoveVector === "function") {
+        window.Game.setMoveVector(x, y);
+      }
+    };
+
+    const resetJoystick = () => {
+      joystickPointerId = null;
+      if (joystick) joystick.classList.remove("is-active");
+      if (joystickKnob) joystickKnob.style.transform = "translate(-50%, -50%)";
+      setMoveVector(0, 0);
+    };
+
+    const updateJoystick = (clientX, clientY) => {
+      if (!joystickBase || !joystickKnob) return;
+      const rect = joystickBase.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const knobSize = joystickKnob.offsetWidth || 58;
+      const maxTravel = Math.max(1, rect.width / 2 - knobSize / 2 - 6);
+      let dx = clientX - centerX;
+      let dy = clientY - centerY;
+      const dist = Math.hypot(dx, dy);
+      if (dist > maxTravel && dist > 0) {
+        dx = (dx / dist) * maxTravel;
+        dy = (dy / dist) * maxTravel;
+      }
+      joystickKnob.style.transform =
+        "translate(calc(-50% + " + dx + "px), calc(-50% + " + dy + "px))";
+
+      const nx = dx / maxTravel;
+      const ny = dy / maxTravel;
+      const mag = Math.hypot(nx, ny);
+      const deadzone = 0.18;
+      if (mag <= deadzone) {
+        setMoveVector(0, 0);
+        return;
+      }
+      const strength = Math.min(1, (mag - deadzone) / (1 - deadzone));
+      setMoveVector((nx / mag) * strength, (ny / mag) * strength);
+    };
+
+    if (joystickBase) {
+      joystickBase.addEventListener(
+        "pointerdown",
+        (event) => {
+          if (joystickPointerId !== null) return;
+          if (!document.body.classList.contains("is-playing")) return;
+          event.preventDefault();
+          joystickPointerId = event.pointerId;
+          if (joystick) joystick.classList.add("is-active");
+          try {
+            joystickBase.setPointerCapture(event.pointerId);
+          } catch (error) {
+            /* no-op */
+          }
+          updateJoystick(event.clientX, event.clientY);
+        },
+        { passive: false }
+      );
+
+      joystickBase.addEventListener(
+        "pointermove",
+        (event) => {
+          if (event.pointerId !== joystickPointerId) return;
+          event.preventDefault();
+          updateJoystick(event.clientX, event.clientY);
+        },
+        { passive: false }
+      );
+
+      const endJoystick = (event) => {
+        if (event.pointerId !== joystickPointerId) return;
+        resetJoystick();
+      };
+      joystickBase.addEventListener("pointerup", endJoystick);
+      joystickBase.addEventListener("pointercancel", endJoystick);
+      joystickBase.addEventListener("lostpointercapture", endJoystick);
     }
 
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) resetJoystick();
+    });
+    window.addEventListener("blur", resetJoystick);
+
     if (shootBtn && typeof Game.triggerManualShoot === "function") {
-      const shootStart = () => {
+      const shootStart = (event) => {
+        event.preventDefault();
         Game.triggerManualShoot();
+        shootBtn.classList.add("is-pressed");
+        window.setTimeout(() => shootBtn.classList.remove("is-pressed"), 120);
       };
-      shootBtn.addEventListener("touchstart", (e) => { e.preventDefault(); shootStart(); }, { passive: false });
-      shootBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); shootStart(); }, { passive: false });
+      shootBtn.addEventListener("touchstart", shootStart, { passive: false });
+      shootBtn.addEventListener("pointerdown", shootStart, { passive: false });
     }
 
     document.addEventListener("keydown", (event) => {
