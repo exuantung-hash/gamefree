@@ -18,6 +18,7 @@ const Game = (() => {
   const BASE_COOLDOWN = 0.46;
   const DART_SPEED = 760;
   const DART_RANGE = 520;
+  const MALEE_RANGE = 128;
   const BASE_DAMAGE = 1;
   const ZOMBIE_HP = 3;
   const ZOMBIE_HP_PER_WAVE = 0.5;
@@ -26,6 +27,19 @@ const Game = (() => {
   const HIT_INVULN = 0.55;
   const GEM_PICKUP = 30;
   const MAGNET_BASE = 64;
+  const SUPER_MAGNET_LEVEL_RADIUS = 35;
+  const SUPER_MAGNET_VACUUM_TIME = 2.4;
+  const SUPER_MAGNET_PULL_SPEED = 1600;
+  const ELECTRIC_CHAIN_CHANCE = 0.15;
+  const ELECTRIC_CHAIN_COUNT = 5;
+  const ELECTRIC_CHAIN_DAMAGE = 10;
+  const ELECTRIC_SLOW_DURATION = 2.5;
+  const ELECTRIC_SLOW_MULT = 0.5;
+  const VAMPIRE_LIFESTEAL = 0.3;
+  const VAMPIRE_LOW_HP_RATIO = 0.3;
+  const VAMPIRE_LOW_HP_BONUS = 0.4;
+  const VAMPIRE_MELEE_DAMAGE = 8;
+  const VAMPIRE_ATTACK_COOLDOWN = 0.5;
   const MAX_ZOMBIES = 64;
   const CELL = 260;
   const POISON_WAVE_START = 5;
@@ -235,6 +249,15 @@ const Game = (() => {
       rarity: "common",
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4v8a7 7 0 0 0 14 0V4"/><path d="M5 9h4M15 9h4"/></svg>',
       desc: (level) => `Tăng tầm hút ngọc năng lượng lên ${MAGNET_BASE + level * 45}px.`,
+    },
+    {
+      id: "superMagnet",
+      name: "Nam châm siêu cấp",
+      tag: "Super Magnet",
+      max: Infinity,
+      rarity: "epic",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4v8a7 7 0 0 0 14 0V4"/><path d="M5 9h4M15 9h4"/><path d="M12 2l1 2.4 2.4 1-2.4 1L12 9l-1-2.6-2.4-1 2.4-1z"/></svg>',
+      desc: (level) => `Hút toàn bộ hạt năng lượng trên bản đồ ngay lập tức. Mỗi cấp +${SUPER_MAGNET_LEVEL_RADIUS}px tầm hút vĩnh viễn. Không giới hạn cấp (Cấp ${level}).`,
     },
     {
       id: "agility",
@@ -624,6 +647,28 @@ const Game = (() => {
       price: 5000,
       desc: "Máu 90 · Không giáp · Tốc độ +10%. Một lần mỗi trận: hồi sinh tại chỗ với 50% máu và 3 giây bất tử.",
     },
+    electrician: {
+      id: "electrician",
+      name: "Kỹ thuật viên điện",
+      tag: "Electrician",
+      hp: 100,
+      armor: 0,
+      speed: 1.05,
+      skin: "electrician",
+      price: 10000,
+      desc: "Máu 100 · Không giáp · Tốc độ +5%. Thay phi tiêu bằng tia điện. 15% cơ hội phóng điện sang 5 zombie gần nhất, gây 10 sát thương và làm chậm 50% trong 2,5 giây.",
+    },
+    vampire: {
+      id: "vampire",
+      name: "Ma cà rồng",
+      tag: "Vampire",
+      hp: 100,
+      armor: 0,
+      speed: 1.1,
+      skin: "vampire",
+      price: 15000,
+      desc: "Máu 100 · Không giáp · Tốc độ +10%. Mỗi đòn hồi 30% sát thương gây ra thành máu. Khi máu dưới 30%, sát thương tăng 40%.",
+    },
   };
 
   const DEBUG = new URLSearchParams(window.location.search).has("debug");
@@ -689,6 +734,7 @@ const Game = (() => {
     money: 0,
     spawnTimer: 0,
     shootCooldown: 0,
+    vampireAttackCooldown: 0,
     autoAttack: true,
     pointerShoot: false,
     revives: 0,
@@ -723,6 +769,9 @@ const Game = (() => {
     resistanceBonus: 0,
     playerSlowTimer: 0,
     playerSlowMult: 1,
+    superMagnetTimer: 0,
+    vampireHealAccum: 0,
+    vampireHealDelay: 0,
     playerBurnTimer: 0,
     playerBurnDps: 0,
     lightningTimer: 0,
@@ -2225,6 +2274,18 @@ const Game = (() => {
 
   function damageZombie(zombie, amount, options = {}) {
     if (!zombie || zombie.dead || amount <= 0) return;
+
+    // Trang bị: tăng sát thương gây ra. Bỏ qua đòn nổ giữa zombie với nhau.
+    if (!options.fromZombie && state.gear && state.gear.damage > 0) {
+      amount *= 1 + state.gear.damage;
+    }
+
+    // Ma cà rồng: dưới 30% máu tăng 40% sát thương gây ra.
+    const vampire = state.characterId === "vampire" && !options.fromZombie;
+    if (vampire && state.hp > 0 && state.hp < state.maxHp * VAMPIRE_LOW_HP_RATIO) {
+      amount *= 1 + VAMPIRE_LOW_HP_BONUS;
+    }
+
     zombie.hp -= amount;
     zombie.hitFlash = Math.max(zombie.hitFlash, options.quiet ? 0.45 : 1);
     if (!options.quiet) {
@@ -2232,6 +2293,17 @@ const Game = (() => {
       DeepwoodAudio.hit();
     }
     if (zombie.hp <= 0) killZombie(zombie);
+
+    // Ma cà rồng: hồi 30% sát thương gây ra thành máu.
+    if (vampire && state.hp > 0 && state.hp < state.maxHp) {
+      const heal = Math.min(state.maxHp - state.hp, amount * VAMPIRE_LIFESTEAL);
+      if (heal > 0) {
+        state.hp += heal;
+        state.vampireHealAccum = (state.vampireHealAccum || 0) + heal;
+        if ((state.vampireHealDelay || 0) <= 0) state.vampireHealDelay = 0.8;
+        updateHealthHud();
+      }
+    }
 
     // Burn effect from Burn skill (không kích hoạt bởi chính damage cháy/thiên thạch)
     if (
@@ -2282,7 +2354,7 @@ const Game = (() => {
       hits += 1;
     }
 
-    state.shootCooldown = BASE_COOLDOWN;
+    state.shootCooldown = BASE_COOLDOWN / (1 + (state.gear ? state.gear.fireRate : 0));
     state.slashes.push({
       x: p.x,
       y: p.y,
@@ -2304,12 +2376,75 @@ const Game = (() => {
 
   function tryAttack() {
     if (state.character && state.character.skin === "warrior" && warriorMelee()) return true;
+    // Ma cà rồng: cào cận chiến, dùng chung nhịp shootCooldown để không đánh mỗi frame.
+    if (state.characterId === "vampire") {
+      if (state.shootCooldown > 0) return true;
+      const nearest = nearestZombie(MALEE_RANGE);
+      if (!nearest) {
+        state.shootCooldown = 0.08;
+        return true;
+      }
+
+      const p = state.player;
+      const swingAngle = Math.atan2(nearest.y - p.y, nearest.x - p.x);
+      p.face = swingAngle;
+
+      // Hiệu ứng chém: vệt cào 3 đường màu đỏ máu.
+      state.slashes.push({
+        x: p.x,
+        y: p.y,
+        angle: swingAngle,
+        life: 0,
+        ttl: 0.28,
+        radius: 78,
+        kind: "vampire",
+      });
+      burst(
+        p.x + Math.cos(swingAngle) * 56,
+        p.y + Math.sin(swingAngle) * 56,
+        8,
+        "255, 96, 128",
+        40,
+        170
+      );
+
+      // damageZombie tự xử lý +40% khi dưới 30% máu và hồi 30% sát thương.
+      const lowHp = state.hp > 0 && state.hp < state.maxHp * VAMPIRE_LOW_HP_RATIO;
+      const gearDamage = 1 + (state.gear ? state.gear.damage : 0);
+      const dealt = Math.round(
+        VAMPIRE_MELEE_DAMAGE * gearDamage * (lowHp ? 1 + VAMPIRE_LOW_HP_BONUS : 1)
+      );
+      damageZombie(nearest, VAMPIRE_MELEE_DAMAGE, {
+        tone: "255, 120, 140",
+        count: 7,
+        speed: 115,
+      });
+      floatText(nearest.x, nearest.y - nearest.radius - 8, `-${dealt}`, "255, 120, 140");
+
+      // Đẩy lui theo hướng cào (không dùng nearest.face vì có thể undefined).
+      if (!nearest.dead) {
+        nearest.x += Math.cos(swingAngle) * 9;
+        nearest.y += Math.sin(swingAngle) * 9;
+      }
+
+      DeepwoodAudio.slash();
+      const vampireCooldown =
+        VAMPIRE_ATTACK_COOLDOWN / (1 + (state.gear ? state.gear.fireRate : 0));
+      state.vampireAttackCooldown = vampireCooldown;
+      state.shootCooldown = vampireCooldown;
+      return true;
+    }
     return shoot();
   }
 
   function triggerManualShoot() {
     if (state.autoAttack) return;
     if (state.shootCooldown <= 0) {
+      // Ma cà rồng luôn cào cận chiến, kể cả khi ngắm bằng chuột.
+      if (state.characterId === "vampire") {
+        tryAttack();
+        return;
+      }
       // Shoot toward mouse pointer position
       const p = state.player;
       if (state.pointer.active) {
@@ -2348,6 +2483,7 @@ const Game = (() => {
         range: DART_RANGE,
         damage,
         angle,
+        kind: state.characterId === "electrician" ? "electric" : "dart",
         pierce: state.skills.pierce > 0
           ? PIERCE_LEVELS[Math.min(state.skills.pierce, PIERCE_LEVELS.length) - 1]
           : 0,
@@ -2358,7 +2494,8 @@ const Game = (() => {
     const fireRateMult = state.skills.fireRate > 0
       ? FIRE_RATE_LEVELS[Math.min(state.skills.fireRate, FIRE_RATE_LEVELS.length) - 1]
       : 1;
-    state.shootCooldown = BASE_COOLDOWN / fireRateMult;
+    const gearFireRate = 1 + (state.gear ? state.gear.fireRate : 0);
+    state.shootCooldown = BASE_COOLDOWN / (fireRateMult * gearFireRate);
     DeepwoodAudio.shoot();
     burst(p.x + Math.cos(baseAngle) * 26, p.y + Math.sin(baseAngle) * 26, 3, "246, 222, 150", 8, 38);
     return true;
@@ -2649,6 +2786,7 @@ const Game = (() => {
         damageZombie(other, Math.round(ZOMBIE_EXPLODER_DAMAGE * 0.6), {
           quiet: true,
           tone: "255, 168, 96",
+          fromZombie: true,
         });
       }
     }
@@ -2674,8 +2812,8 @@ const Game = (() => {
       life: 0,
       bob: rand(0, TAU),
       phase: rand(0, TAU),
-      value: Math.max(1, Math.round(Number(options.value) || 1)),
-      kind: options.kind === "red" ? "red" : "green",
+      value: Math.max(options.kind === "gold" ? 0 : 1, Math.round(Number(options.value) || (options.kind === "gold" ? 0 : 1))),
+      kind: options.kind === "red" ? "red" : options.kind === "gold" ? "gold" : "green",
     });
     if (state.gems.length > 80) state.gems.shift();
   }
@@ -2975,6 +3113,7 @@ const Game = (() => {
       zombie.sawCooldown = Math.max(0, zombie.sawCooldown - dt);
       zombie.phase += dt * 2;
       zombie.freezeTimer = Math.max(0, (zombie.freezeTimer || 0) - dt);
+      zombie.slowTimer = Math.max(0, (zombie.slowTimer || 0) - dt);
 
       if (zombie.howlSpeedMult > 1) {
         zombie.howlSpeedMult = Math.max(1, zombie.howlSpeedMult - dt * 0.5);
@@ -3027,7 +3166,8 @@ const Game = (() => {
 
       const speedMult = zombie.howlSpeedMult || 1;
       const freezeMult = zombie.freezeTimer > 0 ? 0.25 : 1;
-      const finalSpeed = zombie.speed * speedMult * freezeMult;
+      const slowMult = zombie.slowTimer > 0 ? ELECTRIC_SLOW_MULT : 1;
+      const finalSpeed = zombie.speed * speedMult * freezeMult * slowMult;
       if (zombie.burrowState !== "burrowed") {
         let tx = dx / distance + sepX * 1.1;
         let ty = dy / distance + sepY * 1.1;
@@ -3892,6 +4032,55 @@ const Game = (() => {
           floatText(zombie.x, zombie.y - zombie.radius - 10, "CHÍ MẠNG!", "255, 224, 112");
         }
 
+        // Kỹ thuật viên điện: 15% cơ hội phóng điện sang 5 zombie gần nhất
+        if (dart.kind === "electric" && Math.random() < ELECTRIC_CHAIN_CHANCE) {
+          const nearest = [];
+          for (const other of state.zombies) {
+            if (other.dead || other.id === zombie.id) continue;
+            const d2 = distSq(other.x, other.y, zombie.x, zombie.y);
+            if (nearest.length < ELECTRIC_CHAIN_COUNT) {
+              nearest.push({ target: other, d2 });
+              nearest.sort((a, b) => a.d2 - b.d2);
+            } else if (d2 < nearest[nearest.length - 1].d2) {
+              nearest[nearest.length - 1] = { target: other, d2 };
+              nearest.sort((a, b) => a.d2 - b.d2);
+            }
+          }
+
+          for (const entry of nearest) {
+            const target = entry.target;
+            state.chainBolts.push({
+              x1: zombie.x,
+              y1: zombie.y,
+              x2: target.x,
+              y2: target.y,
+              life: 0,
+              ttl: 0.32,
+              seed: rand(0, 1000),
+              blue: true,
+            });
+            damageZombie(target, ELECTRIC_CHAIN_DAMAGE, {
+              quiet: true,
+              noBurn: true,
+              tone: "150, 220, 255",
+              count: 4,
+              speed: 65,
+            });
+            target.slowTimer = Math.max(target.slowTimer || 0, ELECTRIC_SLOW_DURATION);
+            burst(target.x, target.y, 5, "140, 214, 255", 12, 55);
+            if (!target.dead) {
+              floatText(target.x, target.y - target.radius - 8, `-${ELECTRIC_CHAIN_DAMAGE}`, "150, 220, 255");
+            }
+          }
+
+          if (nearest.length > 0) {
+            burst(zombie.x, zombie.y, 7, "170, 230, 255", 18, 86);
+            if (state.chainBolts.length > 60) {
+              state.chainBolts.splice(0, state.chainBolts.length - 60);
+            }
+          }
+        }
+
         const freezeLevel = state.skills.freeze;
         if (freezeLevel > 0 && !zombie.dead) {
           const chance = FREEZE_LEVELS[Math.min(freezeLevel, FREEZE_LEVELS.length) - 1];
@@ -3963,7 +4152,16 @@ const Game = (() => {
 
   function updateGems(dt) {
     const p = state.player;
-    const magnetRadius = MAGNET_BASE + state.skills.magnet * 45;
+    if (state.superMagnetTimer > 0) {
+      state.superMagnetTimer = Math.max(0, state.superMagnetTimer - dt);
+    }
+    const vacuum = state.superMagnetTimer > 0;
+    const magnetRadius = vacuum
+      ? Infinity
+      : MAGNET_BASE +
+        state.skills.magnet * 45 +
+        state.skills.superMagnet * SUPER_MAGNET_LEVEL_RADIUS +
+        (state.gear ? state.gear.magnet : 0);
     const magnetDrag = Math.pow(0.02, dt);
     const driftDrag = Math.pow(0.16, dt);
     const pickupSq = GEM_PICKUP * GEM_PICKUP;
@@ -3977,7 +4175,13 @@ const Game = (() => {
       const dy = p.y - gem.y;
       const distance = Math.sqrt(dx * dx + dy * dy) || 1;
 
-      if (distance < magnetRadius) {
+      if (vacuum) {
+        const pull = Math.min(SUPER_MAGNET_PULL_SPEED, 420 + distance * 6);
+        gem.x += (dx / distance) * pull * dt;
+        gem.y += (dy / distance) * pull * dt;
+        gem.vx *= magnetDrag;
+        gem.vy *= magnetDrag;
+      } else if (distance < magnetRadius) {
         const pull = 260 + (magnetRadius - distance) * 4;
         gem.x += (dx / distance) * pull * dt;
         gem.y += (dy / distance) * pull * dt;
@@ -4385,6 +4589,19 @@ const Game = (() => {
     updateParticles(dt);
     updateTexts(dt);
 
+    // Ma cà rồng: gom lượng máu hồi để hiện một lần, tránh spam chữ.
+    if (state.vampireHealAccum > 0) {
+      state.vampireHealDelay = (state.vampireHealDelay || 0) - dt;
+      if (state.vampireHealDelay <= 0) {
+        const heal = Math.round(state.vampireHealAccum);
+        if (heal > 0) {
+          floatText(state.player.x, state.player.y - 34, `+${heal} HP`, "255, 120, 140");
+        }
+        state.vampireHealAccum = 0;
+        state.vampireHealDelay = 0.8;
+      }
+    }
+
     updateWaves(dt);
     updateRemainingHud();
 
@@ -4489,6 +4706,12 @@ const Game = (() => {
     showToast(`Đã đổi kỹ năng · -${REROLL_COST} tiền`);
   }
 
+  function activateSuperMagnet() {
+    state.superMagnetTimer = SUPER_MAGNET_VACUUM_TIME;
+    showToast("Nam châm siêu cấp: hút toàn bộ hạt năng lượng!");
+    DeepwoodAudio.pickup();
+  }
+
   function chooseSkill(id) {
     const definition = SKILLS.find((skill) => skill.id === id);
     if (!definition) return;
@@ -4550,6 +4773,7 @@ const Game = (() => {
     showToast(`Đã học: ${definition.name} · Năng lượng tối đa ${state.energyMax}`);
     DeepwoodAudio.click();
     focusGame();
+    if (definition.id === "superMagnet") activateSuperMagnet();
   }
 
   let _lastErrorTime = 0;
@@ -5292,19 +5516,40 @@ const Game = (() => {
 
       ctx.save();
       ctx.translate(slash.x, slash.y);
-      ctx.rotate(slash.angle);
-      ctx.strokeStyle = `rgba(255, 246, 206, ${alpha * 0.92})`;
-      ctx.lineWidth = 4.6 * (1 - k * 0.45);
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.arc(0, 0, 54, -0.98, 0.98);
-      ctx.stroke();
 
-      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.48})`;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(0, 0, 46, -0.88, 0.88);
-      ctx.stroke();
+      if (slash.kind === "vampire") {
+        // Vệt cào 3 đường máu, hơi xoay theo nhịp chém.
+        const radius = slash.radius || 78;
+        ctx.rotate(slash.angle + (k - 0.5) * 0.22);
+        ctx.lineCap = "round";
+        for (let i = -1; i <= 1; i += 1) {
+          const spread = 0.78 - Math.abs(i) * 0.12;
+          ctx.strokeStyle = `rgba(255, 72, 108, ${alpha * (0.88 - Math.abs(i) * 0.16)})`;
+          ctx.lineWidth = (5.4 - Math.abs(i) * 1.2) * (1 - k * 0.35);
+          ctx.beginPath();
+          ctx.arc(0, 0, radius + i * 7, -spread, spread);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = `rgba(255, 236, 240, ${alpha * 0.72})`;
+        ctx.lineWidth = 1.8 * (1 - k * 0.4);
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, -0.7, 0.7);
+        ctx.stroke();
+      } else {
+        ctx.rotate(slash.angle);
+        ctx.strokeStyle = `rgba(255, 246, 206, ${alpha * 0.92})`;
+        ctx.lineWidth = 4.6 * (1 - k * 0.45);
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(0, 0, 54, -0.98, 0.98);
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.48})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, 46, -0.88, 0.88);
+        ctx.stroke();
+      }
       ctx.restore();
     }
   }
@@ -5646,6 +5891,7 @@ const Game = (() => {
       const k = clamp(bolt.life / bolt.ttl, 0, 1);
       const alpha = Math.pow(Math.max(0, 1 - k), 0.7);
       if (alpha <= 0.02) continue;
+      const blue = Boolean(bolt.blue);
 
       const dx = bolt.x2 - bolt.x1;
       const dy = bolt.y2 - bolt.y1;
@@ -5682,12 +5928,16 @@ const Game = (() => {
       ctx.lineJoin = "round";
 
       // Quầng vàng
-      ctx.strokeStyle = `rgba(255, 204, 32, ${alpha * 0.35})`;
+      ctx.strokeStyle = blue
+        ? `rgba(90, 180, 255, ${alpha * 0.4})`
+        : `rgba(255, 204, 32, ${alpha * 0.35})`;
       ctx.lineWidth = 10;
       trace();
 
       // Dây điện vàng
-      ctx.strokeStyle = `rgba(255, 230, 84, ${alpha * 0.95})`;
+      ctx.strokeStyle = blue
+        ? `rgba(160, 228, 255, ${alpha * 0.95})`
+        : `rgba(255, 230, 84, ${alpha * 0.95})`;
       ctx.lineWidth = 3.6;
       trace();
 
@@ -5700,7 +5950,11 @@ const Game = (() => {
       ctx.globalAlpha = alpha * 0.8;
       ctx.drawImage(getToneSprite("255, 255, 230"), bolt.x1 - 20, bolt.y1 - 20, 40, 40);
       ctx.globalAlpha = alpha * 0.85;
-      ctx.drawImage(getToneSprite("255, 230, 80"), bolt.x2 - 24, bolt.y2 - 24, 48, 48);
+      if (blue) {
+        ctx.drawImage(getToneSprite("150, 220, 255"), bolt.x2 - 24, bolt.y2 - 24, 48, 48);
+      } else {
+        ctx.drawImage(getToneSprite("255, 230, 80"), bolt.x2 - 24, bolt.y2 - 24, 48, 48);
+      }
       ctx.globalAlpha = 1;
 
       ctx.restore();
@@ -6424,6 +6678,35 @@ const Game = (() => {
   function drawDart(dart) {
     if (!inView(dart.x, dart.y, 60)) return;
     const fade = clamp((dart.range - dart.traveled) / 70, 0, 1);
+
+    // Kỹ thuật viên điện: tia điện thay cho phi tiêu.
+    if (dart.kind === "electric") {
+      ctx.save();
+      ctx.translate(dart.x, dart.y);
+      ctx.rotate(dart.angle);
+      ctx.globalAlpha = 0.28 + fade * 0.65;
+      ctx.drawImage(getToneSprite("120, 210, 255"), -30, -26, 60, 52);
+      ctx.globalAlpha = 0.95;
+      ctx.strokeStyle = "rgba(205, 245, 255, 0.96)";
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-19, 0);
+      ctx.lineTo(-9, -4.5);
+      ctx.lineTo(-2, 0.6);
+      ctx.lineTo(7, 0);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(110, 190, 255, 0.82)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-15, 5);
+      ctx.lineTo(-5, 3);
+      ctx.lineTo(2, 6);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
     ctx.save();
     ctx.globalAlpha = 0.25 + fade * 0.75;
     ctx.translate(dart.x, dart.y);
@@ -6454,6 +6737,8 @@ const Game = (() => {
     const isWarrior = skin === "warrior";
     const isDoctor = skin === "doctor";
     const isRebirth = skin === "rebirth";
+    const isElectrician = skin === "electrician";
+    const isVampire = skin === "vampire";
     const fx = Math.cos(p.face);
     const fy = Math.sin(p.face);
     const moving = Math.hypot(p.vx, p.vy) > 14;
@@ -6522,8 +6807,26 @@ const Game = (() => {
       ctx.moveTo(-4.6, -6);
       ctx.lineTo(-3.8, 6.4);
       ctx.stroke();
+    } else if (isVampire) {
+      // Áo choàng ma cà rồng
+      ctx.fillStyle = "#2a0a12";
+      ctx.beginPath();
+      ctx.moveTo(-6.2, -8.2);
+      ctx.quadraticCurveTo(-11 - sway, 1, -6.6 + sway * 0.3, 12);
+      ctx.lineTo(-2.4, 8);
+      ctx.lineTo(0, 11);
+      ctx.lineTo(2.6, 7.4);
+      ctx.quadraticCurveTo(10 + sway, 1, 6.2, -8.2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(200, 52, 76, 0.45)";
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(-5.2, -6);
+      ctx.lineTo(-4.4, 8.6);
+      ctx.stroke();
     } else if (!isDoctor) {
-      ctx.fillStyle = "#a14b3f";
+      ctx.fillStyle = isElectrician ? "#274a68" : "#a14b3f";
       ctx.beginPath();
       ctx.moveTo(-3.5, -7.5);
       ctx.quadraticCurveTo(-8 - sway, -2, -4.5 + sway * 0.3, 5.5);
@@ -6533,7 +6836,17 @@ const Game = (() => {
       ctx.fill();
     }
 
-    const legColor = isWarrior ? "#394252" : isDoctor ? "#2e4d4f" : isRebirth ? "#3a2c14" : "#2b3f30";
+    const legColor = isWarrior
+      ? "#394252"
+      : isDoctor
+        ? "#2e4d4f"
+        : isRebirth
+          ? "#3a2c14"
+          : isElectrician
+            ? "#1f3548"
+            : isVampire
+              ? "#1a0c12"
+              : "#2b3f30";
     ctx.strokeStyle = legColor;
     ctx.lineWidth = 4.4;
     ctx.lineCap = "round";
@@ -6546,7 +6859,17 @@ const Game = (() => {
     ctx.lineTo(3.4 - stride * 0.5, 14);
     ctx.stroke();
 
-    ctx.fillStyle = isWarrior ? "#242c38" : isDoctor ? "#1d2f31" : isRebirth ? "#2a2010" : "#241a12";
+    ctx.fillStyle = isWarrior
+      ? "#242c38"
+      : isDoctor
+        ? "#1d2f31"
+        : isRebirth
+          ? "#2a2010"
+          : isElectrician
+            ? "#16232e"
+            : isVampire
+              ? "#12070b"
+              : "#241a12";
     ctx.beginPath();
     ctx.ellipse(-3.4 + stride * 0.5, 15, 2.9, 1.8, 0.1, 0, TAU);
     ctx.fill();
@@ -6661,6 +6984,69 @@ const Game = (() => {
       circleIn(ctx, lean * 0.35, 3.4, 2.2);
       ctx.fillStyle = "#fff3c0";
       circleIn(ctx, lean * 0.35, 3.4, 1);
+    } else if (isElectrician) {
+      const suit = ctx.createLinearGradient(-8, -8, 8, 8);
+      suit.addColorStop(0, "#5d8fb4");
+      suit.addColorStop(0.55, "#3d6b8e");
+      suit.addColorStop(1, "#274a68");
+      ctx.fillStyle = suit;
+      ctx.beginPath();
+      ctx.ellipse(lean * 0.35, 1, 8.3, 10.1, 0, 0, TAU);
+      ctx.fill();
+
+      // Tia điện trên ngực áo
+      ctx.fillStyle = "#ffd95e";
+      ctx.beginPath();
+      ctx.moveTo(lean * 0.35 + 0.6, -5.6);
+      ctx.lineTo(lean * 0.35 - 3.4, 1.2);
+      ctx.lineTo(lean * 0.35 - 0.4, 1.2);
+      ctx.lineTo(lean * 0.35 - 1.6, 6.2);
+      ctx.lineTo(lean * 0.35 + 3.6, -1.4);
+      ctx.lineTo(lean * 0.35 + 0.4, -1.4);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#1e2c38";
+      ctx.fillRect(-6.8 + lean * 0.35, 4.4, 13.6, 2.2);
+      ctx.fillStyle = "#ffd95e";
+      ctx.fillRect(-1.2 + lean * 0.35, 4.4, 2.4, 2.2);
+    } else if (isVampire) {
+      const coat = ctx.createLinearGradient(-8, -8, 8, 8);
+      coat.addColorStop(0, "#541a2a");
+      coat.addColorStop(0.5, "#3a101d");
+      coat.addColorStop(1, "#220811");
+      ctx.fillStyle = coat;
+      ctx.beginPath();
+      ctx.ellipse(lean * 0.35, 1, 8.3, 10.1, 0, 0, TAU);
+      ctx.fill();
+
+      // Áo gile đỏ + khăn cổ trắng
+      ctx.fillStyle = "#8e1f34";
+      ctx.beginPath();
+      ctx.moveTo(lean * 0.35 - 4.6, -5.4);
+      ctx.lineTo(lean * 0.35, 7.4);
+      ctx.lineTo(lean * 0.35 + 4.6, -5.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#efe4e8";
+      ctx.beginPath();
+      ctx.moveTo(lean * 0.35 - 3.6, -6.8);
+      ctx.lineTo(lean * 0.35, -1.6);
+      ctx.lineTo(lean * 0.35 + 3.6, -6.8);
+      ctx.lineTo(lean * 0.35, -4.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#c8304a";
+      ctx.beginPath();
+      ctx.moveTo(lean * 0.35, -1.8);
+      ctx.lineTo(lean * 0.35 - 2, 1.8);
+      ctx.lineTo(lean * 0.35, 4.2);
+      ctx.lineTo(lean * 0.35 + 2, 1.8);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#17070d";
+      ctx.fillRect(-6.8 + lean * 0.35, 4.6, 13.6, 2);
     } else {
       ctx.fillStyle = "#3a5b41";
       ctx.beginPath();
@@ -6703,7 +7089,15 @@ const Game = (() => {
     const handRX = 9.4 + fx * 1.2;
     const handRY = handBaseY - armSwing;
 
-    ctx.strokeStyle = isWarrior ? "#687d92" : isDoctor ? "#e8f0ef" : "#c99a6c";
+    ctx.strokeStyle = isWarrior
+      ? "#687d92"
+      : isDoctor
+        ? "#e8f0ef"
+        : isElectrician
+          ? "#2f4e68"
+          : isVampire
+            ? "#1c0d13"
+            : "#c99a6c";
     ctx.lineWidth = 3.2;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -6715,7 +7109,15 @@ const Game = (() => {
     ctx.lineTo(handRX, handRY);
     ctx.stroke();
 
-    ctx.fillStyle = isWarrior ? "#8499ad" : isDoctor ? "#e0b48a" : "#c99a6c";
+    ctx.fillStyle = isWarrior
+      ? "#8499ad"
+      : isDoctor
+        ? "#e0b48a"
+        : isElectrician
+          ? "#e0b48a"
+          : isVampire
+            ? "#e8d7dc"
+            : "#c99a6c";
     circleIn(ctx, handLX, handLY, 2.2);
     circleIn(ctx, handRX, handRY, 2.2);
 
@@ -6759,6 +7161,36 @@ const Game = (() => {
       ctx.stroke();
       ctx.fillStyle = "#c9a23c";
       circleIn(ctx, handRX, handRY + 1.4, 1.1);
+    } else if (isElectrician) {
+      // Thanh phóng điện cầm tay
+      ctx.strokeStyle = "#c9c2a8";
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(handRX, handRY);
+      ctx.lineTo(handRX + 2, handRY - 9);
+      ctx.stroke();
+      ctx.fillStyle = "#ffd95e";
+      circleIn(ctx, handRX + 2, handRY - 10, 1.6);
+      ctx.strokeStyle = "rgba(150, 225, 255, 0.9)";
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(handRX + 2, handRY - 11);
+      ctx.lineTo(handRX - 0.4, handRY - 14);
+      ctx.lineTo(handRX + 1.4, handRY - 13.4);
+      ctx.lineTo(handRX - 0.8, handRY - 17);
+      ctx.stroke();
+    } else if (isVampire) {
+      // Quả cầu máu
+      ctx.fillStyle = "#7a1526";
+      circleIn(ctx, handRX + 1.2, handRY - 3.4, 2.6);
+      ctx.fillStyle = "#e0415b";
+      circleIn(ctx, handRX + 0.6, handRY - 4.2, 1.1);
+      ctx.strokeStyle = "rgba(255, 120, 140, 0.55)";
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(handRX + 1.2, handRY - 3.4, 3.2, 0, TAU);
+      ctx.stroke();
     } else {
       ctx.strokeStyle = "#f0d98e";
       ctx.lineWidth = 1.3;
@@ -6893,6 +7325,90 @@ const Game = (() => {
       ctx.beginPath();
       ctx.ellipse(headX, headY + 5.4, 4.2, 1.5, 0, 0, TAU);
       ctx.fill();
+    } else if (isElectrician) {
+      ctx.fillStyle = "#27323d";
+      circleIn(ctx, headX, headY + 0.2, 7);
+
+      ctx.fillStyle = "#e0b48a";
+      ctx.beginPath();
+      ctx.ellipse(headX + fx * 0.4, headY + 1.2, 5.4, 5.1, 0, 0, TAU);
+      ctx.fill();
+
+      ctx.fillStyle = "#1f2b36";
+      ctx.beginPath();
+      ctx.arc(headX, headY - 2.1, 5.5, Math.PI * 1.06, Math.PI * 1.94);
+      ctx.fill();
+
+      // Kính bảo hộ trên trán
+      ctx.strokeStyle = "#ffd95e";
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(headX - 6.4, headY - 4.2);
+      ctx.lineTo(headX + 6.4, headY - 4.2);
+      ctx.stroke();
+      ctx.fillStyle = "#9fe4ff";
+      circleIn(ctx, headX - 3.7, headY - 4.2, 2.1);
+      circleIn(ctx, headX + 3.7, headY - 4.2, 2.1);
+      ctx.strokeStyle = "#4e8dab";
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(headX - 3.7, headY - 4.2, 2.1, 0, TAU);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(headX + 3.7, headY - 4.2, 2.1, 0, TAU);
+      ctx.stroke();
+
+      ctx.fillStyle = "#b25345";
+      ctx.beginPath();
+      ctx.ellipse(headX, headY + 5.3, 4.3, 1.5, 0, 0, TAU);
+      ctx.fill();
+    } else if (isVampire) {
+      ctx.fillStyle = "#140d12";
+      circleIn(ctx, headX, headY + 0.2, 7.2);
+
+      ctx.fillStyle = "#e8d7dc";
+      ctx.beginPath();
+      ctx.ellipse(headX + fx * 0.4, headY + 1.4, 5.1, 4.9, 0, 0, TAU);
+      ctx.fill();
+
+      // Tóc đen vuốt ngược + chóp trán
+      ctx.fillStyle = "#1b1218";
+      ctx.beginPath();
+      ctx.arc(headX, headY - 2.4, 5.6, Math.PI * 1.02, Math.PI * 1.98);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(headX - 5.2, headY - 3.8);
+      ctx.lineTo(headX, headY - 7.8);
+      ctx.lineTo(headX + 5.2, headY - 3.8);
+      ctx.closePath();
+      ctx.fill();
+
+      // Mắt đỏ
+      ctx.fillStyle = "#ff465a";
+      circleIn(ctx, headX - 2.1 + fx * 0.4, headY + 0.6, 1.15);
+      circleIn(ctx, headX + 2.1 + fx * 0.4, headY + 0.6, 1.15);
+      ctx.fillStyle = "rgba(255, 190, 200, 0.8)";
+      circleIn(ctx, headX - 2.4 + fx * 0.4, headY + 0.2, 0.35);
+      circleIn(ctx, headX + 1.8 + fx * 0.4, headY + 0.2, 0.35);
+
+      // Miệng + nanh
+      ctx.fillStyle = "#8f3a4a";
+      ctx.beginPath();
+      ctx.ellipse(headX, headY + 5.2, 4, 1.4, 0, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = "#fff6f8";
+      ctx.beginPath();
+      ctx.moveTo(headX - 2.8, headY + 4.6);
+      ctx.lineTo(headX - 1.9, headY + 6.8);
+      ctx.lineTo(headX - 1, headY + 4.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(headX + 1, headY + 4.6);
+      ctx.lineTo(headX + 1.9, headY + 6.8);
+      ctx.lineTo(headX + 2.8, headY + 4.6);
+      ctx.closePath();
+      ctx.fill();
     } else {
       ctx.fillStyle = "#66482a";
       circleIn(ctx, headX, headY + 0.2, 7);
@@ -6911,11 +7427,11 @@ const Game = (() => {
       ctx.fill();
     }
 
-    if (!away) {
+    if (!away && !isVampire) {
       const eyeY = headY + (isWarrior ? 1.4 : isDoctor ? 0.9 : 0.7) + fy * 0.3;
       const eyeX = headX + fx * 0.6;
       const oneEye = Math.abs(fx) > 0.65;
-      ctx.fillStyle = "#2a1d10";
+      ctx.fillStyle = isElectrician ? "#3f7fa8" : "#2a1d10";
       if (oneEye) {
         circleIn(ctx, eyeX + (fx > 0 ? 1.2 : -1.2), eyeY, 1);
       } else {
@@ -6939,6 +7455,40 @@ const Game = (() => {
       ctx.beginPath();
       ctx.arc(headX, headY - 2, 5, 0.2, Math.PI - 0.2);
       ctx.stroke();
+    }
+
+    // Ma cà rồng: hào quang đỏ khi máu dưới 30% (kích hoạt +40% sát thương)
+    if (isVampire && state.hp > 0 && state.hp < state.maxHp * VAMPIRE_LOW_HP_RATIO) {
+      const pulse = 0.5 + 0.5 * Math.sin(t * 7);
+      ctx.save();
+      ctx.globalAlpha = 0.35 + pulse * 0.25;
+      ctx.strokeStyle = "#ff3a52";
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 17 + pulse * 4, 0, TAU);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(180, 20, 40, 0.1)";
+      ctx.beginPath();
+      ctx.arc(0, 0, 17 + pulse * 4, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Nam châm siêu cấp: vòng hút năng lượng quanh người chơi
+    if (state.superMagnetTimer > 0) {
+      const pulse = 0.5 + 0.5 * Math.sin(t * 12);
+      ctx.save();
+      ctx.globalAlpha = 0.3 + pulse * 0.25;
+      ctx.strokeStyle = "rgba(150, 226, 255, 0.9)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 22 + pulse * 8, 0, TAU);
+      ctx.stroke();
+      ctx.globalAlpha *= 0.6;
+      ctx.beginPath();
+      ctx.arc(0, 0, 30 + pulse * 10, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
     }
 
     // Khiên hiệu ứng khi dưới 50% HP (tối ưu: vẽ ít layer, bỏ loop đoạn)
@@ -7182,9 +7732,23 @@ const Game = (() => {
       hp: clamp(Math.floor(Number(upgradeInput.hp) || 0), 0, 5),
       speed: clamp(Math.floor(Number(upgradeInput.speed) || 0), 0, 3),
     };
-    state.speedMult = 1 + state.upgrades.speed * 0.04;
+
+    const gearInput = options.equipment && typeof options.equipment === "object" ? options.equipment : {};
+    state.gear = {
+      damage: clamp(Number(gearInput.damage) || 0, 0, 2),
+      hp: clamp(Math.floor(Number(gearInput.hp) || 0), 0, 500),
+      armor: clamp(Math.floor(Number(gearInput.armor) || 0), 0, 200),
+      speed: clamp(Number(gearInput.speed) || 0, 0, 1),
+      fireRate: clamp(Number(gearInput.fireRate) || 0, 0, 2),
+      magnet: clamp(Number(gearInput.magnet) || 0, 0, 500),
+    };
+
+    state.speedMult = (1 + state.upgrades.speed * 0.04) * (1 + state.gear.speed);
     state.autoAttack = options.autoAttack !== false;
     state.revives = state.character.revives || 0;
+    state.superMagnetTimer = 0;
+    state.vampireHealAccum = 0;
+    state.vampireHealDelay = 0;
 
     if (state.active) stop(false);
 
@@ -7203,10 +7767,10 @@ const Game = (() => {
     state.keys.clear();
     state.pointer.active = false;
     resetJoystick();
-    state.hp = state.character.hp + state.upgrades.hp * 10;
+    state.hp = state.character.hp + state.upgrades.hp * 10 + state.gear.hp;
     state.maxHp = state.hp;
-    state.armor = state.character.armor;
-    state.maxArmor = state.character.armor;
+    state.armor = state.character.armor + state.gear.armor;
+    state.maxArmor = state.armor;
     state.armorDisplay = -1;
     state.invuln = 0;
     state.hurtFlash = 0;
@@ -7405,7 +7969,7 @@ const Game = (() => {
         character: state.characterId,
         characterName: state.character.name,
         speed: BASE_SPEED * state.character.speed * state.speedMult,
-        mitigation: state.character.skin === "warrior" ? ARMOR_MITIGATION : 0,
+        mitigation: state.maxArmor > 0 ? ARMOR_MITIGATION : 0,
         meleeRange: WARRIOR_MELEE_RANGE,
         meleeDamage: WARRIOR_MELEE_DAMAGE,
         energy: state.energy,
@@ -7431,6 +7995,7 @@ const Game = (() => {
         joystick: { x: state.joystick.x, y: state.joystick.y, active: state.joystick.active },
         revives: state.revives,
         upgrades: { ...state.upgrades },
+        gear: { ...state.gear },
         playerBurnTimer: state.playerBurnTimer,
         playerBurnDps: state.playerBurnDps,
         speedMult: state.speedMult,
@@ -7538,6 +8103,9 @@ const Game = (() => {
           life: bolt.life,
           ttl: bolt.ttl,
         })),
+        superMagnetTimer: state.superMagnetTimer,
+        vampireHealAccum: state.vampireHealAccum,
+        vampireHealDelay: state.vampireHealDelay,
         xRayBeams: state.xRayBeams.map((beam) => ({
           x: beam.x,
           y: beam.y,
@@ -7746,6 +8314,8 @@ const Game = (() => {
       spawnBoss: spawnBossDebug,
       setMoney,
       reroll: rerollDebug,
+    activateSuperMagnet: () => activateSuperMagnet(),
+    spawnGem: (x, y, kind) => { spawnGem(x, y, { kind }); writeSnapshot(); },
       collectGems,
       spawnMonster: spawn,
       spawnZombieType: spawnType,
